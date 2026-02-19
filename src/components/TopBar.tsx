@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Truck, CreditCard, Tag, Phone } from 'lucide-react';
+import { Truck, CreditCard, Tag } from 'lucide-react';
 
 const messages = [
   {
@@ -13,10 +13,6 @@ const messages = [
   {
     icon: <Tag className="w-3.5 h-3.5 shrink-0" />,
     text: '10% de desconto no PIX',
-  },
-  {
-    icon: <Phone className="w-3.5 h-3.5 shrink-0" />,
-    text: '(94) 98179-6065',
   },
 ];
 
