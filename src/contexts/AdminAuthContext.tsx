@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+
 
 interface AdminUser {
   id: string;
@@ -43,7 +43,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<{ error?: string }> => {
     try {
-      const response = await fetch('/api/auth/admin-login', {
+      const response = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -52,12 +52,12 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok) return { error: data.message || 'Credenciais inválidas' };
 
       const session = {
-        user: data.user,
+        user: data.admin,
         token: data.token,
-        expires_at: Date.now() + 24 * 60 * 60 * 1000, // 24h
+        expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 dias
       };
       localStorage.setItem('admin_session', JSON.stringify(session));
-      setAdmin(data.user);
+      setAdmin(data.admin);
       return {};
     } catch {
       return { error: 'Erro de conexão. Tente novamente.' };

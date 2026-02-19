@@ -56,7 +56,7 @@ export function Orders() {
 
   const updateStatus = async (id: string, status: string) => {
     setUpdatingId(id);
-    await fetch(`/api/orders/${id}`, {
+    await fetch(`/api/orders?id=${id}`, {
       method: 'PATCH',
       headers: getAuthHeader(),
       body: JSON.stringify({ status }),

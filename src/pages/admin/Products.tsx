@@ -52,7 +52,7 @@ export function Products() {
   }, [search]);
 
   const toggleActive = async (id: string, current: boolean) => {
-    await fetch(`/api/products/${id}`, {
+    await fetch(`/api/products?id=${id}`, {
       method: 'PATCH',
       headers: getAuthHeader(),
       body: JSON.stringify({ active: !current }),
@@ -61,7 +61,7 @@ export function Products() {
   };
 
   const toggleFeatured = async (id: string, current: boolean) => {
-    await fetch(`/api/products/${id}`, {
+    await fetch(`/api/products?id=${id}`, {
       method: 'PATCH',
       headers: getAuthHeader(),
       body: JSON.stringify({ featured: !current }),
@@ -71,7 +71,7 @@ export function Products() {
 
   const deleteProduct = async (id: string, name: string) => {
     if (!confirm(`Remover o produto "${name}"? Esta ação não pode ser desfeita.`)) return;
-    await fetch(`/api/products/${id}`, { method: 'DELETE', headers: getAuthHeader() });
+    await fetch(`/api/products?id=${id}`, { method: 'DELETE', headers: getAuthHeader() });
     fetchProducts();
   };
 

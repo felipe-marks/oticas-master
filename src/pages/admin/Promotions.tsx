@@ -37,7 +37,7 @@ export function Promotions() {
 
   const fetchPromotions = async () => {
     setLoading(true);
-    const res = await fetch('/api/promotions?active_only=false', { headers: getAuthHeader() });
+    const res = await fetch('/api/catalog?resource=promotions&active_only=false', { headers: getAuthHeader() });
     const data = await res.json();
     setPromotions(Array.isArray(data) ? data : []);
     setLoading(false);
@@ -70,7 +70,7 @@ export function Promotions() {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
       };
-      const url = editing ? `/api/promotions/${editing.id}` : '/api/promotions';
+      const url = editing ? `/api/catalog?resource=promotions&id=${editing.id}` : '/api/promotions';
       const method = editing ? 'PUT' : 'POST';
       const res = await fetch(url, { method, headers: getAuthHeader(), body: JSON.stringify(payload) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
@@ -87,7 +87,7 @@ export function Promotions() {
   };
 
   const toggleActive = async (p: any) => {
-    await fetch(`/api/promotions/${p.id}`, {
+    await fetch(`/api/catalog?resource=promotions&id=${p.id}`, {
       method: 'PATCH', headers: getAuthHeader(),
       body: JSON.stringify({ active: !p.active }),
     });

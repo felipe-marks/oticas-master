@@ -44,7 +44,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
   });
 
   useEffect(() => {
-    fetch('/api/categories').then(r => r.json()).then(setCategories);
+    fetch('/api/catalog?resource=categories').then(r => r.json()).then(setCategories);
   }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +60,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     formData.append('file', imageFile);
     formData.append('bucket', 'products');
     const s = JSON.parse(localStorage.getItem('admin_session') || '{}');
-    const res = await fetch('/api/upload/image', {
+    const res = await fetch('/api/upload', {
       method: 'POST',
       headers: { Authorization: `Bearer ${s.token}` },
       body: formData,
@@ -93,7 +93,7 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
         category_id: form.category_id || null,
       };
 
-      const url = product ? `/api/products/${product.id}` : '/api/products';
+      const url = product ? `/api/products?id=${product.id}` : '/api/products';
       const method = product ? 'PUT' : 'POST';
       const res = await fetch(url, {
         method,

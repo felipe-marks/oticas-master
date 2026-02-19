@@ -13,7 +13,7 @@ export function SiteSettings() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    fetch('/api/admin/settings').then(r => r.json()).then(d => { setSettings(d); setLoading(false); });
+    fetch('/api/admin?resource=settings').then(r => r.json()).then(d => { setSettings(d); setLoading(false); });
   }, []);
 
   const set = (key: string, value: any) => setSettings(s => ({ ...s, [key]: value }));
@@ -21,7 +21,7 @@ export function SiteSettings() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await fetch('/api/admin/settings', {
+    await fetch('/api/admin?resource=settings', {
       method: 'PUT',
       headers: getAuthHeader(),
       body: JSON.stringify(settings),

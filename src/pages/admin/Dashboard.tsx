@@ -57,7 +57,7 @@ export function Dashboard() {
 
   useEffect(() => {
     const session = JSON.parse(localStorage.getItem('admin_session') || '{}');
-    fetch('/api/admin/dashboard', {
+    fetch('/api/admin?resource=dashboard', {
       headers: { Authorization: `Bearer ${session.token}` }
     })
       .then(r => r.json())
