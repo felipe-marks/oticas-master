@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Glasses, Sun, User, Trophy, Shield, ShoppingCart, Star, Tag } from 'lucide-react';
+import { Glasses, Sun, User, Trophy, Shield, ShoppingCart, Star, Tag, MessageCircle } from 'lucide-react';
+import { useCart } from '../contexts/CartContext';
 
 interface Product {
   id: string;
@@ -32,30 +33,48 @@ function formatCurrency(value: number) {
 }
 
 function ProductCard({ product }: { product: Product }) {
+  const { addItem } = useCart();
+  const [added, setAdded] = useState(false);
+
   const whatsappLink = `https://wa.me/5594981796065?text=Olá!%20Tenho%20interesse%20no%20produto%20*${encodeURIComponent(product.name)}*%20(R$%20${product.price_sale || product.price_original}).%20Pode%20me%20ajudar?`;
   const hasDiscount = product.price_sale && product.price_sale < product.price_original;
   const discountPct = hasDiscount
     ? Math.round((1 - product.price_sale! / product.price_original) * 100)
     : 0;
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price_sale || product.price_original,
+      price_pix: product.price_pix,
+      image: product.main_image_url,
+      sku: product.slug,
+    });
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
   return (
     <article className="bg-white border border-gray-100 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 group flex flex-col">
       {/* Imagem */}
-      <div className="relative bg-gray-50 h-52 flex items-center justify-center overflow-hidden group-hover:bg-beige-light/20 transition-colors">
+      <a href={`/produto/${product.slug}`} className="block relative bg-gray-50 h-52 flex items-center justify-center overflow-hidden group-hover:bg-beige-light/20 transition-colors">
         {product.main_image_url ? (
           <img
             src={product.main_image_url}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
-              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
             }}
           />
-        ) : null}
-        <div className={`flex items-center justify-center w-full h-full ${product.main_image_url ? 'hidden' : ''}`}>
-          {categoryIcons['grau']}
-        </div>
+        ) : (
+          <div className="flex items-center justify-center w-full h-full">
+            {categoryIcons['grau']}
+          </div>
+        )}
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1">
@@ -71,7 +90,7 @@ function ProductCard({ product }: { product: Product }) {
             </span>
           )}
         </div>
-      </div>
+      </a>
 
       {/* Conteúdo */}
       <div className="p-5 flex flex-col flex-1">
@@ -80,9 +99,11 @@ function ProductCard({ product }: { product: Product }) {
             {product.categories.name}
           </span>
         )}
-        <h3 className="font-serif text-lg font-bold text-gray-main mb-2 line-clamp-2">
-          {product.name}
-        </h3>
+        <a href={`/produto/${product.slug}`}>
+          <h3 className="font-serif text-lg font-bold text-gray-main mb-2 line-clamp-2 hover:text-gold transition-colors">
+            {product.name}
+          </h3>
+        </a>
         {product.short_description && (
           <p className="text-sm text-gray-secondary mb-3 line-clamp-2">{product.short_description}</p>
         )}
@@ -108,15 +129,29 @@ function ProductCard({ product }: { product: Product }) {
           )}
         </div>
 
-        <a
-          href={whatsappLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 flex items-center justify-center gap-2 w-full py-3 px-4 bg-transparent border-2 border-gray-200 text-gray-main rounded-lg hover:border-gold hover:bg-gold hover:text-white transition-all font-medium text-sm"
-        >
-          <ShoppingCart className="w-4 h-4" />
-          Consultar / Comprar
-        </a>
+        {/* Botões de ação */}
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleAddToCart}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
+              added
+                ? 'bg-green-500 text-white'
+                : 'bg-gold text-white hover:bg-gold/90 active:scale-95'
+            }`}
+          >
+            <ShoppingCart className="w-4 h-4" />
+            {added ? '✓ Adicionado!' : 'Adicionar'}
+          </button>
+          <a
+            href={whatsappLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Consultar via WhatsApp"
+            className="flex items-center justify-center py-3 px-3 border-2 border-gray-200 text-gray-500 rounded-lg hover:border-green-500 hover:bg-green-50 hover:text-green-600 transition-all"
+          >
+            <MessageCircle className="w-4 h-4" />
+          </a>
+        </div>
       </div>
     </article>
   );
@@ -189,7 +224,6 @@ export const Products: React.FC = () => {
             ))}
           </div>
         ) : error || products.length === 0 ? (
-          // Fallback: exibir produtos estáticos se não houver produtos cadastrados
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {staticProducts.map(p => (
               <StaticProductCard key={p.id} title={p.title} price={p.price} icon={p.icon} />
