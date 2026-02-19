@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <!-- Charset e Viewport -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Títulos e Descrições -->
+    <title>Óticas Master | Óculos de Qualidade Premium em Parauapebas</title>
+    <meta name="description" content="Óticas Master - Óculos de qualidade premium com atendimento personalizado em Parauapebas, PA. Armações importadas, lentes de alta qualidade e consultoria especializada.">
+    <meta name="keywords" content="óculos, ótica, armações, lentes, Parauapebas, óptico, visão, consultoria visual">
+    <meta name="author" content="Óticas Master">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Portuguese">
+    
+    <!-- Open Graph (Redes Sociais) -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Óticas Master | Óculos de Qualidade Premium em Parauapebas">
+    <meta property="og:description" content="Armações importadas, lentes de alta qualidade e atendimento personalizado. Transforme sua visão com a Óticas Master.">
+    <meta property="og:url" content="https://oticasmaster.com.br">
+    <meta property="og:site_name" content="Óticas Master">
+    <meta property="og:locale" content="pt_BR">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Óticas Master | Óculos de Qualidade Premium">
+    <meta name="twitter:description" content="Armações importadas e atendimento especializado em Parauapebas">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://oticasmaster.com.br">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              gold: {
+                DEFAULT: '#B8860B',
+                light: '#DAA520',
+                dark: '#8B6508',
+              },
+              beige: {
+                light: '#F5E6D3',
+                DEFAULT: '#E6D2B5',
+              },
+              gray: {
+                main: '#1a1a1a',
+                secondary: '#666666',
+                light: '#f5f5f5',
+              }
+            },
+            fontFamily: {
+              serif: ['"Playfair Display"', 'serif'],
+              sans: ['Montserrat', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- Estilos -->
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+      .fade-in {
+        animation: fadeIn 0.8s ease-out forwards;
+        opacity: 0;
+      }
+      .slide-up {
+        animation: slideUp 0.8s ease-out forwards;
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      @keyframes fadeIn {
+        to { opacity: 1; }
+      }
+      @keyframes slideUp {
+        to { opacity: 1; transform: translateY(0); }
+      }
+    </style>
+    
+    <!-- Schema.org - Dados Estruturados -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "Óticas Master",
+      "image": "https://oticasmaster.com.br/logo.png",
+      "description": "Ótica de qualidade premium com armações importadas e atendimento especializado",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Parauapebas",
+        "addressLocality": "Parauapebas",
+        "addressRegion": "PA",
+        "postalCode": "",
+        "addressCountry": "BR"
+      },
+      "telephone": "+5594981796065",
+      "url": "https://oticasmaster.com.br",
+      "sameAs": [
+        "https://www.instagram.com/oticasmaster.pbs"
+      ],
+      "priceRange": "$$",
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+          "opens": "08:00",
+          "closes": "18:00"
+        }
+      ]
+    }
+    </script>
+    
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta name="referrer" content="strict-origin-when-cross-origin">
+    
+    <!-- Preload crítico -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" as="style">
+    
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>
