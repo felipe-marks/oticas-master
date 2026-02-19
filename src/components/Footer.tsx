@@ -99,7 +99,7 @@ export const Footer: React.FC = () => {
 
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm text-center md:text-left">
-            &copy; {new Date().getFullYear()} Óticas Master. CNPJ: XX.XXX.XXX/0001-XX.
+            &copy; {new Date().getFullYear()} Óticas Master. CNPJ: 45.657.100/0001-23.
           </p>
           <div className="flex items-center gap-2 text-gray-600 text-xs">
              <span>Desenvolvido com</span>

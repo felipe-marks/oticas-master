@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
 import { Categories } from './components/Categories';
@@ -13,6 +13,18 @@ import { CartDrawer } from './components/CartDrawer';
 import { CartProvider } from './contexts/CartContext';
 import { AdminApp } from './pages/admin/AdminApp';
 
+// Lazy load para páginas de produto e categoria
+const ProductPage = lazy(() => import('./pages/ProductPage'));
+const CategoryPage = lazy(() => import('./pages/CategoryPage'));
+
+function LoadingSpinner() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
+
 // Roteamento simples baseado em pathname
 function Router() {
   const path = window.location.pathname;
@@ -20,6 +32,24 @@ function Router() {
   // Rota do painel admin
   if (path.startsWith('/admin')) {
     return <AdminApp />;
+  }
+
+  // Rota de produto individual: /produto/nome-do-produto
+  if (path.startsWith('/produto/')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <ProductPage />
+      </Suspense>
+    );
+  }
+
+  // Rota de categoria: /categoria/solar, /categoria/grau, etc.
+  if (path.startsWith('/categoria/')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <CategoryPage />
+      </Suspense>
+    );
   }
 
   // Site principal (front-end público)
