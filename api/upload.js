@@ -11,7 +11,7 @@ const supabase = createClient(
 function verifyToken(token) {
   try {
     const [header, body, sig] = token.split('.');
-    const secret = process.env.JWT_SECRET || 'oticas-master-secret-2026';
+    const secret = process.env.JWT_SECRET || 'oticas-master-jwt-secret-2026-felipe-juliana-parauapebas-pa';
     const expectedSig = crypto
       .createHmac('sha256', secret)
       .update(`${header}.${body}`)

@@ -3,7 +3,7 @@
 import crypto from 'crypto';
 
 // Secret único e consistente em toda a aplicação
-const JWT_SECRET = () => process.env.JWT_SECRET || 'oticas-master-secret-2026';
+const JWT_SECRET = () => process.env.JWT_SECRET || 'oticas-master-jwt-secret-2026-felipe-juliana-parauapebas-pa';
 
 export function generateToken(payload) {
   const secret = JWT_SECRET();

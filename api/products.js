@@ -9,7 +9,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 function verifyToken(token) {
   try {
     const [header, body, sig] = token.split('.');
-    const secret = process.env.JWT_SECRET || 'oticas-master-secret-2026';
+    const secret = process.env.JWT_SECRET || 'oticas-master-jwt-secret-2026-felipe-juliana-parauapebas-pa';
     const expectedSig = crypto.createHmac('sha256', secret).update(`${header}.${body}`).digest('base64url');
     if (sig !== expectedSig) return null;
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
