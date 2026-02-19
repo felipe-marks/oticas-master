@@ -39,6 +39,12 @@ export function Products() {
       ...(search ? { search } : {})
     });
     const res = await fetch(`/api/products?${params}`, { headers: getAuthHeader() });
+    if (res.status === 401) {
+      // Token inválido — limpar sessão e recarregar para forçar login
+      localStorage.removeItem('admin_session');
+      window.location.reload();
+      return;
+    }
     const data = await res.json();
     setProducts(data.products || []);
     setTotal(data.pagination?.total || 0);

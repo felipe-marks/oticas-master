@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-
 interface AdminUser {
   id: string;
   name: string;
@@ -23,22 +22,36 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar se há sessão salva
-    const stored = localStorage.getItem('admin_session');
-    if (stored) {
+    const validateSession = async () => {
+      const stored = localStorage.getItem('admin_session');
+      if (!stored) { setLoading(false); return; }
+
       try {
         const session = JSON.parse(stored);
-        // Verificar se o token ainda é válido (24h)
-        if (session.expires_at > Date.now()) {
+        if (!session.token || session.expires_at <= Date.now()) {
+          localStorage.removeItem('admin_session');
+          setLoading(false);
+          return;
+        }
+
+        // Validar o token fazendo uma chamada real à API
+        const res = await fetch('/api/admin?action=dashboard', {
+          headers: { Authorization: `Bearer ${session.token}` }
+        });
+
+        if (res.ok) {
           setAdmin(session.user);
         } else {
+          // Token inválido — limpar e forçar novo login
           localStorage.removeItem('admin_session');
         }
       } catch {
         localStorage.removeItem('admin_session');
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    validateSession();
   }, []);
 
   const login = async (email: string, password: string): Promise<{ error?: string }> => {
@@ -54,7 +67,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       const session = {
         user: data.admin,
         token: data.token,
-        expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 dias
+        expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
       };
       localStorage.setItem('admin_session', JSON.stringify(session));
       setAdmin(data.admin);
