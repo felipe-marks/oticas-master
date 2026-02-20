@@ -1,12 +1,14 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { CartDrawer } from '../components/CartDrawer';
 import { CartProvider } from '../contexts/CartContext';
 import {
-  User, Package, LogOut, Eye, EyeOff, Mail, Lock, Phone,
-  ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle,
-  ShoppingBag, MapPin, Edit2, Save
+  User, Package, LogOut, Eye, EyeOff, Mail, Lock,
+  Heart, MapPin, CreditCard, Shield, RotateCcw,
+  AlertCircle, Edit2, Save, X, ChevronRight, Clock,
+  CheckCircle, Truck, XCircle, ShoppingBag, Phone,
+  Calendar, Users, FileText
 } from 'lucide-react';
 
 // ===== CONTEXTO DO CLIENTE =====
@@ -16,23 +18,24 @@ interface CustomerUser {
   email: string;
   phone?: string;
   token: string;
+  exp: number;
 }
 
 interface CustomerAuthContextType {
   user: CustomerUser | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone?: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
 
 const CustomerAuthContext = createContext<CustomerAuthContextType>({} as CustomerAuthContextType);
 
-function useCustomerAuth() {
+export function useCustomerAuth() {
   return useContext(CustomerAuthContext);
 }
 
-function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
+export function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CustomerUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -64,11 +67,11 @@ function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('oticas_customer', JSON.stringify(userData));
   };
 
-  const register = async (name: string, email: string, password: string, phone?: string) => {
+  const register = async (name: string, email: string, password: string) => {
     const res = await fetch('/api/customer?action=register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password, phone }),
+      body: JSON.stringify({ name, email, password }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.message || 'Erro ao criar conta');
@@ -89,7 +92,7 @@ function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ===== COMPONENTE DE LOGIN/CADASTRO =====
+// ===== FORMULÁRIO DE LOGIN/CADASTRO =====
 function AuthForm() {
   const { login, register } = useCustomerAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -100,7 +103,6 @@ function AuthForm() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Validação de força da senha
   const passwordChecks = {
     length: password.length >= 8,
     upper: /[A-Z]/.test(password),
@@ -118,7 +120,7 @@ function AuthForm() {
         await login(email, password);
       } else {
         if (!name.trim()) throw new Error('Informe seu nome completo');
-        if (passwordStrength < 4) throw new Error('A senha não atende aos requisitos de segurança abaixo.');
+        if (passwordStrength < 4) throw new Error('A senha não atende aos requisitos de segurança.');
         await register(name, email, password);
       }
     } catch (err: any) {
@@ -129,7 +131,7 @@ function AuthForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+    <div className="min-h-[60vh] bg-gray-50 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gold/10 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -144,18 +146,13 @@ function AuthForm() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-          {/* Tabs */}
           <div className="flex bg-gray-100 rounded-xl p-1 mb-6">
-            <button
-              onClick={() => { setMode('login'); setError(''); }}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'login' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
+            <button onClick={() => { setMode('login'); setError(''); }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'login' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
               Entrar
             </button>
-            <button
-              onClick={() => { setMode('register'); setError(''); }}
-              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'register' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-            >
+            <button onClick={() => { setMode('register'); setError(''); }}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'register' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
               Criar Conta
             </button>
           </div>
@@ -166,14 +163,9 @@ function AuthForm() {
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome completo</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder="Seu nome completo"
-                    required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
-                  />
+                  <input type="text" value={name} onChange={e => setName(e.target.value)}
+                    placeholder="Seu nome completo" required
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm" />
                 </div>
               </div>
             )}
@@ -182,31 +174,19 @@ function AuthForm() {
               <label className="block text-sm font-medium text-gray-700 mb-1.5">E-mail</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  required
-                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
-                />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="seu@email.com" required
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm" />
               </div>
             </div>
-
-
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder={mode === 'register' ? 'Ex: Senha@123' : 'Sua senha'}
-                  required
-                  className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
-                />
+                <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder={mode === 'register' ? 'Ex: Senha@123' : 'Sua senha'} required
+                  className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm" />
                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -239,276 +219,551 @@ function AuthForm() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 bg-gold text-white rounded-xl font-semibold hover:bg-gold/90 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {submitting ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                mode === 'login' ? 'Entrar' : 'Criar Conta'
-              )}
+            <button type="submit" disabled={submitting}
+              className="w-full py-3 bg-gold text-white font-semibold rounded-xl hover:bg-gold/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+              {submitting ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar Conta'}
             </button>
           </form>
         </div>
-
-        <p className="text-center text-sm text-gray-500 mt-4">
-          <a href="/" className="text-gold hover:underline">← Voltar para a loja</a>
-        </p>
       </div>
     </div>
   );
 }
 
-// ===== STATUS DOS PEDIDOS =====
-const ORDER_STATUS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  pending: { label: 'Aguardando confirmação', color: 'text-yellow-600 bg-yellow-50 border-yellow-200', icon: <Clock className="w-4 h-4" /> },
-  confirmed: { label: 'Confirmado', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: <CheckCircle className="w-4 h-4" /> },
-  processing: { label: 'Em preparação', color: 'text-purple-600 bg-purple-50 border-purple-200', icon: <Package className="w-4 h-4" /> },
-  shipped: { label: 'Enviado', color: 'text-indigo-600 bg-indigo-50 border-indigo-200', icon: <Truck className="w-4 h-4" /> },
-  delivered: { label: 'Entregue', color: 'text-green-600 bg-green-50 border-green-200', icon: <CheckCircle className="w-4 h-4" /> },
-  cancelled: { label: 'Cancelado', color: 'text-red-600 bg-red-50 border-red-200', icon: <XCircle className="w-4 h-4" /> },
-};
+// ===== SEÇÃO: MEUS DADOS =====
+function MeusDados({ user }: { user: CustomerUser }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user.name || '');
+  const [phone, setPhone] = useState(user.phone || '');
+  const [cpf, setCpf] = useState('');
+  const [birthdate, setBirthdate] = useState('');
+  const [gender, setGender] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-// ===== PAINEL DO CLIENTE =====
-function CustomerDashboard() {
-  const { user, logout } = useCustomerAuth();
-  const [tab, setTab] = useState<'orders' | 'profile'>('orders');
-  const [orders, setOrders] = useState<any[]>([]);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [editProfile, setEditProfile] = useState(false);
-  const [profileName, setProfileName] = useState(user?.name || '');
-  const [profilePhone, setProfilePhone] = useState(user?.phone || '');
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/customer?action=profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ name, phone }),
+      });
+      if (res.ok) {
+        setSuccess(true);
+        setEditing(false);
+        setTimeout(() => setSuccess(false), 3000);
+        const saved = localStorage.getItem('oticas_customer');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          localStorage.setItem('oticas_customer', JSON.stringify({ ...parsed, name, phone }));
+        }
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  useEffect(() => {
-    if (!user?.token) return;
-    fetch('/api/customer?action=orders', {
-      headers: { Authorization: `Bearer ${user.token}` },
-    })
-      .then(r => r.json())
-      .then(data => {
-        setOrders(Array.isArray(data) ? data : data.orders || []);
-        setLoadingOrders(false);
-      })
-      .catch(() => setLoadingOrders(false));
-  }, [user]);
-
-  const tabs = [
-    { id: 'orders', label: 'Meus Pedidos', icon: <Package className="w-4 h-4" /> },
-    { id: 'profile', label: 'Meu Perfil', icon: <User className="w-4 h-4" /> },
-  ];
+  const firstName = name.split(' ')[0] || '';
+  const lastName = name.split(' ').slice(1).join(' ') || '';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header da área do cliente */}
-      <div className="bg-gray-main text-white py-8 px-4">
-        <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gold rounded-full flex items-center justify-center text-white font-bold text-lg">
-              {user?.name?.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="text-sm text-gray-400">Bem-vindo(a) de volta,</p>
-              <h1 className="font-bold text-lg">{user?.name}</h1>
-            </div>
-          </div>
-          <button onClick={logout} className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sair</span>
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Meus Dados</h2>
+        {!editing ? (
+          <button onClick={() => setEditing(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            <Edit2 className="w-4 h-4" /> Editar
           </button>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={() => setEditing(false)}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+              <X className="w-4 h-4" /> Cancelar
+            </button>
+            <button onClick={handleSave} disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors disabled:opacity-60">
+              <Save className="w-4 h-4" /> {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {success && (
+        <div className="mb-4 flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+          <CheckCircle className="w-4 h-4" /> Dados salvos com sucesso!
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Nome */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Seu nome</label>
+          {editing ? (
+            <input type="text" value={firstName} onChange={e => setName(`${e.target.value} ${lastName}`.trim())}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+          ) : (
+            <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">{firstName || '—'}</p>
+          )}
+        </div>
+
+        {/* Sobrenome */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Sobrenome</label>
+          {editing ? (
+            <input type="text" value={lastName} onChange={e => setName(`${firstName} ${e.target.value}`.trim())}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+          ) : (
+            <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">{lastName || '—'}</p>
+          )}
+        </div>
+
+        {/* Email */}
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">E-mail</label>
+          <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">{user.email}</p>
+        </div>
+
+        {/* CPF */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">CPF</label>
+          {editing ? (
+            <input type="text" value={cpf} onChange={e => setCpf(e.target.value)} placeholder="000.000.000-00"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+          ) : (
+            <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">{cpf || '—'}</p>
+          )}
+        </div>
+
+        {/* Gênero */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Gênero</label>
+          {editing ? (
+            <select value={gender} onChange={e => setGender(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold">
+              <option value="">Selecione</option>
+              <option value="M">Masculino</option>
+              <option value="F">Feminino</option>
+              <option value="O">Prefiro não informar</option>
+            </select>
+          ) : (
+            <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">
+              {gender === 'M' ? 'Masculino' : gender === 'F' ? 'Feminino' : gender === 'O' ? 'Prefiro não informar' : '—'}
+            </p>
+          )}
+        </div>
+
+        {/* Nascimento */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Nascimento</label>
+          {editing ? (
+            <input type="date" value={birthdate} onChange={e => setBirthdate(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+          ) : (
+            <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">{birthdate || '—'}</p>
+          )}
+        </div>
+
+        {/* Telefone */}
+        <div>
+          <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Telefone</label>
+          {editing ? (
+            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="(94) 99999-9999"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+          ) : (
+            <p className="text-sm text-gray-800 py-2.5 border-b border-gray-100">{phone || '—'}</p>
+          )}
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Tabs de navegação */}
-        <div className="flex gap-2 mb-6 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-          {tabs.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id as any)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${tab === t.id ? 'bg-gold text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          ))}
+      {/* Newsletter */}
+      <div className="mt-8 p-4 border border-gray-200 rounded-xl">
+        <h3 className="text-sm font-semibold text-gray-800 mb-2">Newsletter</h3>
+        <p className="text-xs text-gray-500 mb-3">Você quer receber e-mails com promoções e novidades da Óticas Master?</p>
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="checkbox" className="mt-0.5 w-4 h-4 accent-gold rounded" />
+          <span className="text-xs text-gray-600">Aceito receber comunicações promocionais e de marketing da Óticas Master. Você pode cancelar a qualquer momento.</span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+// ===== SEÇÃO: MEUS PEDIDOS =====
+function MeusPedidos({ user }: { user: CustomerUser }) {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/customer?action=orders', { headers: { Authorization: `Bearer ${user.token}` } })
+      .then(r => r.json())
+      .then(data => { setOrders(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [user.token]);
+
+  const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+    pending: { label: 'Aguardando', color: 'text-yellow-600 bg-yellow-50 border-yellow-200', icon: Clock },
+    confirmed: { label: 'Confirmado', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: CheckCircle },
+    preparing: { label: 'Em Preparo', color: 'text-purple-600 bg-purple-50 border-purple-200', icon: Package },
+    shipped: { label: 'Enviado', color: 'text-indigo-600 bg-indigo-50 border-indigo-200', icon: Truck },
+    delivered: { label: 'Entregue', color: 'text-green-600 bg-green-50 border-green-200', icon: CheckCircle },
+    cancelled: { label: 'Cancelado', color: 'text-red-600 bg-red-50 border-red-200', icon: XCircle },
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">Meus Pedidos</h2>
+      {orders.length === 0 ? (
+        <div className="text-center py-16">
+          <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Você ainda não fez nenhum pedido</p>
+          <p className="text-gray-400 text-sm mt-1">Explore nosso catálogo e encontre o óculos perfeito!</p>
+          <a href="/" className="inline-block mt-4 px-6 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold/90 transition-colors">Ver Produtos</a>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {orders.map(order => {
+            const status = statusConfig[order.status] || statusConfig.pending;
+            const StatusIcon = status.icon;
+            return (
+              <div key={order.id} className="border border-gray-200 rounded-xl p-4 hover:border-gold/40 transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Pedido #{order.order_number || order.id.slice(0, 8).toUpperCase()}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                  </div>
+                  <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${status.color}`}>
+                    <StatusIcon className="w-3.5 h-3.5" /> {status.label}
+                  </span>
+                </div>
+                {order.items?.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {order.items.map((item: any) => (
+                      <div key={item.id} className="flex items-center gap-3">
+                        {item.image_url && <img src={item.image_url} alt={item.product_name} className="w-12 h-12 object-cover rounded-lg border border-gray-100" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-800 truncate">{item.product_name}</p>
+                          <p className="text-xs text-gray-500">{item.quantity}x — R$ {Number(item.unit_price).toFixed(2).replace('.', ',')}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                  <p className="text-sm font-bold text-gray-900">Total: R$ {Number(order.total_amount).toFixed(2).replace('.', ',')}</p>
+                  {order.tracking_code && (
+                    <p className="text-xs text-gray-500">Rastreio: <span className="font-mono font-semibold text-gray-700">{order.tracking_code}</span></p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== SEÇÃO: FAVORITOS =====
+function Favoritos() {
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">Favoritos</h2>
+      <div className="text-center py-16">
+        <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500 font-medium">Você ainda não tem favoritos</p>
+        <p className="text-gray-400 text-sm mt-1">Clique no coração nos produtos para salvá-los aqui</p>
+        <a href="/" className="inline-block mt-4 px-6 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold/90 transition-colors">Explorar Produtos</a>
+      </div>
+    </div>
+  );
+}
+
+// ===== SEÇÃO: ENDEREÇOS =====
+function Enderecos() {
+  const [adding, setAdding] = useState(false);
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Endereços</h2>
+        <button onClick={() => setAdding(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">
+          + Adicionar Endereço
+        </button>
+      </div>
+      {!adding ? (
+        <div className="text-center py-16">
+          <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Nenhum endereço cadastrado</p>
+          <p className="text-gray-400 text-sm mt-1">Adicione um endereço para facilitar suas compras</p>
+        </div>
+      ) : (
+        <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+          <h3 className="font-semibold text-gray-800 mb-4">Novo Endereço</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {['CEP', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado'].map(field => (
+              <div key={field} className={field === 'Rua' ? 'md:col-span-2' : ''}>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{field}</label>
+                <input type="text" placeholder={field}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button onClick={() => setAdding(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+            <button className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">Salvar Endereço</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ===== SEÇÃO: CARTÕES =====
+function Cartoes() {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-gray-900">Cartões</h2>
+        <button className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">
+          + Adicionar Cartão
+        </button>
+      </div>
+      <div className="text-center py-16">
+        <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500 font-medium">Nenhum cartão cadastrado</p>
+        <p className="text-gray-400 text-sm mt-1">Seus cartões salvos aparecerão aqui para compras mais rápidas</p>
+      </div>
+    </div>
+  );
+}
+
+// ===== SEÇÃO: MEU ACESSO =====
+function MeuAcesso({ user }: { user: CustomerUser }) {
+  const [currentPass, setCurrentPass] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const passwordChecks = {
+    length: newPass.length >= 8,
+    upper: /[A-Z]/.test(newPass),
+    number: /[0-9]/.test(newPass),
+    symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPass),
+  };
+  const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (passwordStrength < 4) { setError('A nova senha não atende aos requisitos de segurança.'); return; }
+    if (newPass !== confirmPass) { setError('As senhas não coincidem.'); return; }
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 3000);
+    setCurrentPass(''); setNewPass(''); setConfirmPass('');
+  };
+
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">Meu Acesso</h2>
+      <div className="max-w-md">
+        <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">E-mail de acesso</p>
+          <p className="text-sm font-semibold text-gray-800">{user.email}</p>
         </div>
 
-        {/* Aba: Meus Pedidos */}
-        {tab === 'orders' && (
+        <h3 className="font-semibold text-gray-800 mb-4">Alterar Senha</h3>
+        <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            {loadingOrders ? (
-              <div className="space-y-4">
-                {[1,2,3].map(i => <div key={i} className="bg-white rounded-xl h-32 animate-pulse border border-gray-100" />)}
-              </div>
-            ) : orders.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-                <ShoppingBag className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                <h2 className="text-xl font-semibold text-gray-700 mb-2">Nenhum pedido ainda</h2>
-                <p className="text-gray-500 mb-6">Você ainda não realizou nenhum pedido. Que tal explorar nossos produtos?</p>
-                <a href="/" className="inline-block bg-gold text-white px-6 py-3 rounded-full font-semibold hover:bg-gold/90 transition-colors">
-                  Ver Produtos
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders.map(order => {
-                  const status = ORDER_STATUS[order.status] || ORDER_STATUS.pending;
-                  return (
-                    <div key={order.id} className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <p className="text-xs text-gray-400 mb-1">Pedido #{order.order_number || order.id?.slice(0,8).toUpperCase()}</p>
-                          <p className="text-sm text-gray-500">
-                            {new Date(order.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                          </p>
-                        </div>
-                        <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border ${status.color}`}>
-                          {status.icon}
-                          {status.label}
-                        </span>
-                      </div>
-
-                      {order.items && order.items.length > 0 && (
-                        <div className="border-t border-gray-50 pt-3 mb-3">
-                          {order.items.slice(0, 2).map((item: any, idx: number) => (
-                            <div key={idx} className="flex items-center gap-3 py-1.5">
-                              {item.image_url && (
-                                <img src={item.image_url} alt={item.product_name} className="w-10 h-10 object-contain bg-gray-50 rounded-lg" />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-800 truncate">{item.product_name}</p>
-                                <p className="text-xs text-gray-500">{item.quantity}x {Number(item.unit_price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                              </div>
-                            </div>
-                          ))}
-                          {order.items.length > 2 && (
-                            <p className="text-xs text-gray-400 mt-1">+{order.items.length - 2} item(s)</p>
-                          )}
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-                        <div>
-                          <p className="text-xs text-gray-400">Total</p>
-                          <p className="font-bold text-gray-900">{Number(order.total_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
-                        </div>
-                        {order.tracking_code && (
-                          <div className="text-right">
-                            <p className="text-xs text-gray-400">Código de rastreio</p>
-                            <p className="text-sm font-mono font-semibold text-gold">{order.tracking_code}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha atual</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type={showCurrent ? 'text' : 'password'} value={currentPass} onChange={e => setCurrentPass(e.target.value)}
+                placeholder="Sua senha atual" required
+                className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nova senha</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type={showNew ? 'text' : 'password'} value={newPass} onChange={e => setNewPass(e.target.value)}
+                placeholder="Ex: NovaSenha@123" required
+                className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            {newPass.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {[
+                  { check: passwordChecks.length, label: '8+ caracteres' },
+                  { check: passwordChecks.upper, label: 'Maiúscula' },
+                  { check: passwordChecks.number, label: 'Número' },
+                  { check: passwordChecks.symbol, label: 'Símbolo' },
+                ].map(({ check, label }) => (
+                  <span key={label} className={`inline-flex items-center gap-1 mr-2 text-xs ${check ? 'text-green-600' : 'text-gray-400'}`}>
+                    {check ? '✓' : '○'} {label}
+                  </span>
+                ))}
               </div>
             )}
           </div>
-        )}
-
-        {/* Aba: Meu Perfil */}
-        {tab === 'profile' && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 max-w-lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-gray-900">Meus Dados</h2>
-              <button
-                onClick={() => setEditProfile(!editProfile)}
-                className="flex items-center gap-1.5 text-sm text-gold hover:text-gold/80 font-medium transition-colors"
-              >
-                {editProfile ? <Save className="w-4 h-4" /> : <Edit2 className="w-4 h-4" />}
-                {editProfile ? 'Salvar' : 'Editar'}
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Nome completo</label>
-                {editProfile ? (
-                  <input
-                    type="text"
-                    value={profileName}
-                    onChange={e => setProfileName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium py-3 px-4 bg-gray-50 rounded-xl">{user?.name}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">E-mail</label>
-                <p className="text-gray-900 font-medium py-3 px-4 bg-gray-50 rounded-xl flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  {user?.email}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Telefone</label>
-                {editProfile ? (
-                  <input
-                    type="tel"
-                    value={profilePhone}
-                    onChange={e => setProfilePhone(e.target.value)}
-                    placeholder="(94) 99999-9999"
-                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
-                  />
-                ) : (
-                  <p className="text-gray-900 font-medium py-3 px-4 bg-gray-50 rounded-xl flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    {user?.phone || 'Não informado'}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-gray-100">
-              <button
-                onClick={logout}
-                className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700 font-medium transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                Sair da minha conta
-              </button>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirmar nova senha</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)}
+                placeholder="Repita a nova senha" required
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
             </div>
           </div>
-        )}
+          {error && <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600"><AlertCircle className="w-4 h-4" />{error}</div>}
+          {success && <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700"><CheckCircle className="w-4 h-4" />Senha alterada com sucesso!</div>}
+          <button type="submit" className="w-full py-3 bg-gold text-white font-semibold rounded-xl hover:bg-gold/90 transition-colors">Alterar Senha</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ===== SEÇÃO: DEVOLUÇÕES =====
+function Devolucoes() {
+  return (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900 mb-6">Devoluções</h2>
+      <div className="text-center py-16">
+        <RotateCcw className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <p className="text-gray-500 font-medium">Nenhuma devolução solicitada</p>
+        <p className="text-gray-400 text-sm mt-1 max-w-sm mx-auto">
+          Caso precise devolver um produto, entre em contato conosco pelo WhatsApp ou acesse "Meus Pedidos" e solicite a devolução.
+        </p>
+        <a href="https://wa.me/5594981796065" target="_blank" rel="noopener noreferrer"
+          className="inline-block mt-4 px-6 py-2.5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition-colors">
+          Falar no WhatsApp
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ===== ÁREA DO CLIENTE LOGADO =====
+function CustomerDashboard({ user }: { user: CustomerUser }) {
+  const { logout } = useCustomerAuth();
+  const [activeSection, setActiveSection] = useState('dados');
+
+  const menuItems = [
+    { id: 'dados', label: 'Meus Dados', icon: User },
+    { id: 'favoritos', label: 'Favoritos', icon: Heart },
+    { id: 'enderecos', label: 'Endereços', icon: MapPin },
+    { id: 'pedidos', label: 'Meus Pedidos', icon: Package },
+    { id: 'cartoes', label: 'Cartões', icon: CreditCard },
+    { id: 'acesso', label: 'Meu Acesso', icon: Shield },
+    { id: 'devolucoes', label: 'Devoluções', icon: RotateCcw },
+  ];
+
+  const renderSection = () => {
+    switch (activeSection) {
+      case 'dados': return <MeusDados user={user} />;
+      case 'favoritos': return <Favoritos />;
+      case 'enderecos': return <Enderecos />;
+      case 'pedidos': return <MeusPedidos user={user} />;
+      case 'cartoes': return <Cartoes />;
+      case 'acesso': return <MeuAcesso user={user} />;
+      case 'devolucoes': return <Devolucoes />;
+      default: return <MeusDados user={user} />;
+    }
+  };
+
+  return (
+    <div className="min-h-[60vh] bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Cabeçalho */}
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-14 h-14 bg-gold/10 rounded-full flex items-center justify-center">
+            <User className="w-7 h-7 text-gold" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Olá,</p>
+            <h1 className="text-xl font-bold text-gray-900">{user.name}</h1>
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Sidebar */}
+          <aside className="w-full md:w-56 shrink-0">
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <nav className="divide-y divide-gray-50">
+                {menuItems.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <button key={item.id} onClick={() => setActiveSection(item.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium transition-colors text-left ${
+                        activeSection === item.id
+                          ? 'bg-gold/5 text-gold border-l-2 border-gold'
+                          : 'text-gray-700 hover:bg-gray-50 border-l-2 border-transparent'
+                      }`}>
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {item.label}
+                    </button>
+                  );
+                })}
+                <button onClick={logout}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-medium text-red-500 hover:bg-red-50 transition-colors border-l-2 border-transparent text-left">
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  Sair da Conta
+                </button>
+              </nav>
+            </div>
+          </aside>
+
+          {/* Conteúdo principal */}
+          <main className="flex-1 bg-white rounded-2xl border border-gray-100 p-6">
+            {renderSection()}
+          </main>
+        </div>
       </div>
     </div>
   );
 }
 
 // ===== PÁGINA PRINCIPAL =====
+export default function CustomerArea() {
+  return (
+    <CustomerAuthProvider>
+      <CartProvider>
+        <div className="min-h-screen flex flex-col">
+          <Header />
+          <CartDrawer />
+          <div className="flex-1">
+            <CustomerAreaContent />
+          </div>
+          <Footer />
+        </div>
+      </CartProvider>
+    </CustomerAuthProvider>
+  );
+}
+
 function CustomerAreaContent() {
   const { user, loading } = useCustomerAuth();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  return user ? <CustomerDashboard /> : <AuthForm />;
-}
-
-export default function CustomerArea() {
-  return (
-    <CartProvider>
-      <CustomerAuthProvider>
-        <div className="min-h-screen bg-white font-sans text-gray-main selection:bg-gold selection:text-white">
-          <Header />
-          <main>
-            <CustomerAreaContent />
-          </main>
-          <Footer />
-          <CartDrawer />
-        </div>
-      </CustomerAuthProvider>
-    </CartProvider>
-  );
+  return user ? <CustomerDashboard user={user} /> : <AuthForm />;
 }
