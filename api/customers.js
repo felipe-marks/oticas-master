@@ -1,4 +1,4 @@
-// api/customers.js — Listagem de clientes para o painel administrativo
+// api/customers.js — Listagem e detalhes de clientes para o painel administrativo
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
@@ -38,8 +38,61 @@ export default async function handler(req, res) {
   const admin = requireAdmin(req, res);
   if (!admin) return;
 
-  // GET /api/customers — Listar clientes com paginação e busca
   if (req.method === 'GET') {
+    // GET /api/customers?id=xxx — Detalhes completos de um cliente específico
+    if (req.query.id) {
+      const customerId = req.query.id;
+
+      // Buscar dados básicos do cliente
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('id, name, email, phone, cpf, gender, birthdate, newsletter, created_at')
+        .eq('id', customerId)
+        .single();
+
+      if (customerError || !customer) {
+        return res.status(404).json({ message: 'Cliente não encontrado' });
+      }
+
+      // Buscar endereços
+      const { data: addresses } = await supabase
+        .from('customer_addresses')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+
+      // Buscar cartões
+      const { data: cards } = await supabase
+        .from('customer_cards')
+        .select('id, brand, last4, holder_name, expiry, created_at')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+
+      // Buscar favoritos
+      const { data: favorites } = await supabase
+        .from('customer_favorites')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+
+      // Buscar pedidos
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, status, total, created_at')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      return res.status(200).json({
+        ...customer,
+        addresses: addresses || [],
+        cards: cards || [],
+        favorites: favorites || [],
+        orders: orders || [],
+      });
+    }
+
+    // GET /api/customers — Listar clientes com paginação e busca
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const search = req.query.search || '';
@@ -67,17 +120,6 @@ export default async function handler(req, res) {
         pages: Math.ceil((count || 0) / limit)
       }
     });
-  }
-
-  // GET /api/customers?id=xxx — Detalhes de um cliente específico
-  if (req.method === 'GET' && req.query.id) {
-    const { data: customer, error } = await supabase
-      .from('customers')
-      .select('id, name, email, phone, cpf, gender, birthdate, created_at')
-      .eq('id', req.query.id)
-      .single();
-    if (error) return res.status(404).json({ message: 'Cliente não encontrado' });
-    return res.status(200).json(customer);
   }
 
   return res.status(405).json({ message: 'Método não permitido' });
