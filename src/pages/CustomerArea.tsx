@@ -247,7 +247,7 @@ function MeusDados({ user }: { user: CustomerUser }) {
       const res = await fetch('/api/customer?action=profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name, phone, cpf, gender, birthdate }),
       });
       if (res.ok) {
         setSuccess(true);
@@ -538,6 +538,7 @@ function Enderecos({ user }: { user: CustomerUser }) {
   const [estado, setEstado] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     fetch('/api/customer?action=addresses', { headers: { Authorization: `Bearer ${user.token}` } })
@@ -571,8 +572,12 @@ function Enderecos({ user }: { user: CustomerUser }) {
   };
 
   const handleSaveAddress = async () => {
-    if (!cep || !rua || !numero || !cidade) return;
+    if (!cep || !rua || !numero || !cidade) {
+      setSaveError('Preencha CEP, rua, número e cidade.');
+      return;
+    }
     setSaving(true);
+    setSaveError('');
     try {
       const res = await fetch('/api/customer?action=addresses', {
         method: 'POST',
@@ -584,9 +589,12 @@ function Enderecos({ user }: { user: CustomerUser }) {
         setAddresses(prev => [data, ...prev]);
         setAdding(false);
         setCep(''); setRua(''); setNumero(''); setComplemento(''); setBairro(''); setCidade(''); setEstado('');
+      } else {
+        setSaveError(data.message || `Erro ao salvar endereço (${res.status})`);
       }
-    } catch {}
-    finally { setSaving(false); }
+    } catch (err: any) {
+      setSaveError('Erro de conexão. Tente novamente.');
+    } finally { setSaving(false); }
   };
 
   const handleRemove = async (id: string) => {
@@ -687,6 +695,7 @@ function Enderecos({ user }: { user: CustomerUser }) {
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
             </div>
           </div>
+          {saveError && <p className="text-sm text-red-600 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">{saveError}</p>}
           <div className="flex gap-3 mt-4">
             <button onClick={() => setAdding(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
             <button onClick={handleSaveAddress} disabled={!cep || !rua || !numero || !cidade || saving}

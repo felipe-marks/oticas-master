@@ -155,16 +155,19 @@ export default async function handler(req, res) {
     const payload = requireCustomerAuth(req, res);
     if (!payload) return;
 
-    const { name, phone } = req.body;
+    const { name, phone, cpf, gender, birthdate } = req.body;
     const updates = {};
     if (name) updates.name = name.trim();
     if (phone !== undefined) updates.phone = phone || null;
+    if (cpf !== undefined) updates.cpf = cpf || null;
+    if (gender !== undefined) updates.gender = gender || null;
+    if (birthdate !== undefined) updates.birthdate = birthdate || null;
 
     const { data, error } = await supabase
       .from('customers')
       .update(updates)
       .eq('id', payload.id)
-      .select('id, name, email, phone')
+      .select('id, name, email, phone, cpf, gender, birthdate')
       .single();
 
     if (error) return res.status(400).json({ message: error.message });
