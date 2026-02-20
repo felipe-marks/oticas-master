@@ -69,9 +69,9 @@ function Router() {
         <Header />
         <main>
           <Hero />
+          <Products />
           <Categories />
           <Features />
-          <Products />
           <Testimonials />
           <About />
           <Newsletter />
