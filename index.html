@@ -149,10 +149,7 @@
       fbq('init', '902527715663017');
       fbq('track', 'PageView');
     </script>
-    <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=902527715663017&ev=PageView&noscript=1"
-    /></noscript>
-    <!-- Fim Meta Pixel -->
+    <!-- Fim Meta Pixel (noscript movido para o body abaixo) -->
     
     <!-- Security Headers -->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -166,6 +163,10 @@
     
   </head>
   <body>
+    <!-- Meta Pixel noscript (fallback para navegadores sem JS) -->
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=902527715663017&ev=PageView&noscript=1"
+    /></noscript>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
   </body>
