@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Search, Users, Phone, Mail } from 'lucide-react';
 
 function getAuthHeader() {
@@ -13,19 +13,36 @@ export function Customers() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async (currentPage: number, currentSearch: string) => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: '20' });
-    if (search) params.append('search', search);
-    const res = await fetch(`/api/customers?${params}`, { headers: getAuthHeader() });
-    const data = await res.json();
-    setCustomers(data.customers || []);
-    setTotal(data.pagination?.total || 0);
-    setLoading(false);
-  };
+    try {
+      const params = new URLSearchParams({ page: String(currentPage), limit: '20' });
+      if (currentSearch) params.append('search', currentSearch);
+      const res = await fetch(`/api/customers?${params}`, { headers: getAuthHeader() });
+      const data = await res.json();
+      setCustomers(data.customers || []);
+      setTotal(data.pagination?.total || 0);
+    } catch {
+      setCustomers([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  useEffect(() => { fetchCustomers(); }, [page]);
-  useEffect(() => { const t = setTimeout(fetchCustomers, 400); return () => clearTimeout(t); }, [search]);
+  // Carregamento inicial e ao mudar de página
+  useEffect(() => {
+    fetchCustomers(page, search);
+  }, [page]);
+
+  // Busca com debounce — reseta para página 1
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPage(1);
+      fetchCustomers(1, search);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('pt-BR') : '—';
   const formatCurrency = (v: number) => v?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || 'R$ 0,00';
@@ -44,7 +61,7 @@ export function Customers() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" placeholder="Buscar por nome, e-mail ou telefone..."
-            value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            value={search} onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
         </div>
       </div>
