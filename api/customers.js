@@ -64,7 +64,7 @@ export default async function handler(req, res) {
       // Buscar cartões
       const { data: cards } = await supabase
         .from('customer_cards')
-        .select('id, brand, last4, holder_name, expiry, created_at')
+        .select('id, card_brand, last_four, holder_name, expiry_month, expiry_year, created_at')
         .eq('customer_id', customerId)
         .order('created_at', { ascending: false });
 

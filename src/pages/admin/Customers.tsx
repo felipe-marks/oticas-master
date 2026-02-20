@@ -123,12 +123,12 @@ function CustomerDetail({ customerId, onClose }: { customerId: string; onClose: 
                           <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">{addr.label}</span>
                         )}
                         <p className="text-sm font-medium text-gray-800 mt-1">
-                          {addr.street}{addr.number ? `, ${addr.number}` : ''}{addr.complement ? ` - ${addr.complement}` : ''}
+                          {addr.rua}{addr.numero ? `, ${addr.numero}` : ''}{addr.complemento ? ` - ${addr.complemento}` : ''}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {addr.neighborhood && `${addr.neighborhood}, `}{addr.city} - {addr.state}
+                          {addr.bairro && `${addr.bairro}, `}{addr.cidade} - {addr.estado}
                         </p>
-                        <p className="text-xs text-gray-400">CEP: {addr.zip_code}</p>
+                        <p className="text-xs text-gray-400">CEP: {addr.cep}</p>
                       </div>
                     ))
                   )}
@@ -169,10 +169,10 @@ function CustomerDetail({ customerId, onClose }: { customerId: string; onClose: 
                           <CreditCard className="w-5 h-5 text-gray-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-800">
-                            {card.brand} •••• {card.last4}
-                          </p>
-                          <p className="text-xs text-gray-500">{card.holder_name} · Validade: {card.expiry}</p>
+                        <p className="text-sm font-medium text-gray-800">
+                          {card.card_brand} •••• {card.last_four}
+                        </p>
+                        <p className="text-xs text-gray-500">{card.holder_name} · Validade: {card.expiry_month}/{card.expiry_year}</p>
                         </div>
                       </div>
                     ))
