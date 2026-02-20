@@ -122,5 +122,82 @@ export default async function handler(req, res) {
     });
   }
 
+  // DELETE /api/customers?id=xxx — Excluir cliente (preserva pedidos)
+  if (req.method === 'DELETE') {
+    const customerId = req.query.id;
+    if (!customerId) return res.status(400).json({ message: 'ID do cliente é obrigatório' });
+
+    // Verificar se o cliente existe
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('id, name, email')
+      .eq('id', customerId)
+      .single();
+
+    if (!customer) return res.status(404).json({ message: 'Cliente não encontrado' });
+
+    // Preservar pedidos: desvincula o customer_id dos pedidos (mantém histórico)
+    await supabase
+      .from('orders')
+      .update({ customer_id: null, customer_name: customer.name, customer_email: customer.email })
+      .eq('customer_id', customerId);
+
+    // Excluir dados vinculados
+    await supabase.from('customer_addresses').delete().eq('customer_id', customerId);
+    await supabase.from('customer_cards').delete().eq('customer_id', customerId);
+    await supabase.from('customer_favorites').delete().eq('customer_id', customerId);
+
+    // Excluir o cliente
+    const { error } = await supabase.from('customers').delete().eq('id', customerId);
+    if (error) return res.status(500).json({ message: error.message });
+
+    // TODO: Enviar e-mail de notificação ao cliente quando sistema de e-mails for integrado
+    // sendEmail(customer.email, 'Conta excluída', 'Sua conta na Óticas Master foi excluída...')
+
+    return res.status(200).json({ message: 'Cliente excluído com sucesso', deleted: { id: customerId, name: customer.name, email: customer.email } });
+  }
+
+  // POST /api/customers?action=cleanup — Limpeza automática de contas inativas
+  // Regra: conta criada há mais de 1 ano E nunca fez nenhuma compra
+  if (req.method === 'POST' && req.query.action === 'cleanup') {
+    // Buscar clientes com conta há mais de 1 ano
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const { data: oldCustomers } = await supabase
+      .from('customers')
+      .select('id, name, email, created_at')
+      .lt('created_at', oneYearAgo.toISOString());
+
+    if (!oldCustomers || oldCustomers.length === 0) {
+      return res.status(200).json({ message: 'Nenhum cliente elegível para exclusão', deleted: 0 });
+    }
+
+    // Filtrar apenas os que nunca compraram
+    const deleted = [];
+    for (const c of oldCustomers) {
+      const { count } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', c.id);
+
+      if (count === 0) {
+        // Excluir dados vinculados
+        await supabase.from('customer_addresses').delete().eq('customer_id', c.id);
+        await supabase.from('customer_cards').delete().eq('customer_id', c.id);
+        await supabase.from('customer_favorites').delete().eq('customer_id', c.id);
+        await supabase.from('customers').delete().eq('id', c.id);
+        deleted.push({ id: c.id, name: c.name, email: c.email });
+        // TODO: Enviar e-mail de notificação quando sistema de e-mails for integrado
+      }
+    }
+
+    return res.status(200).json({
+      message: `Limpeza concluída: ${deleted.length} conta(s) excluída(s)`,
+      deleted: deleted.length,
+      accounts: deleted
+    });
+  }
+
   return res.status(405).json({ message: 'Método não permitido' });
 }
