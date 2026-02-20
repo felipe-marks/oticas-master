@@ -150,18 +150,34 @@ export default async function handler(req, res) {
     return res.status(200).json(formatted);
   }
 
+  // ===== BUSCAR PERFIL =====
+  if (action === 'profile' && req.method === 'GET') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { data, error } = await supabase
+      .from('customers')
+      .select('id, name, email, phone, cpf, gender, birthdate, newsletter, created_at')
+      .eq('id', payload.id)
+      .single();
+
+    if (error || !data) return res.status(404).json({ message: 'Cliente não encontrado' });
+    return res.status(200).json(data);
+  }
+
   // ===== ATUALIZAR PERFIL =====
   if (action === 'profile' && req.method === 'PATCH') {
     const payload = requireCustomerAuth(req, res);
     if (!payload) return;
 
-    const { name, phone, cpf, gender, birthdate } = req.body;
+    const { name, phone, cpf, gender, birthdate, newsletter } = req.body;
     const updates = {};
     if (name) updates.name = name.trim();
     if (phone !== undefined) updates.phone = phone || null;
     if (cpf !== undefined) updates.cpf = cpf || null;
     if (gender !== undefined) updates.gender = gender || null;
     if (birthdate !== undefined) updates.birthdate = birthdate || null;
+    if (newsletter !== undefined) updates.newsletter = newsletter;
 
     const { data, error } = await supabase
       .from('customers')

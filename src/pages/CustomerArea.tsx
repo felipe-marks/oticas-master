@@ -238,8 +238,28 @@ function MeusDados({ user }: { user: CustomerUser }) {
   const [cpf, setCpf] = useState('');
   const [birthdate, setBirthdate] = useState('');
   const [gender, setGender] = useState('');
+  const [newsletter, setNewsletter] = useState(false);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Buscar perfil completo do banco ao montar
+  useEffect(() => {
+    fetch('/api/customer?action=profile', { headers: { Authorization: `Bearer ${user.token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.id) {
+          setName(data.name || '');
+          setPhone(data.phone || '');
+          setCpf(data.cpf || '');
+          setGender(data.gender || '');
+          setBirthdate(data.birthdate || '');
+          setNewsletter(data.newsletter || false);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingProfile(false));
+  }, [user.token]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -247,7 +267,7 @@ function MeusDados({ user }: { user: CustomerUser }) {
       const res = await fetch('/api/customer?action=profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
-        body: JSON.stringify({ name, phone, cpf, gender, birthdate }),
+        body: JSON.stringify({ name, phone, cpf, gender, birthdate, newsletter }),
       });
       if (res.ok) {
         setSuccess(true);
@@ -266,6 +286,8 @@ function MeusDados({ user }: { user: CustomerUser }) {
 
   const firstName = name.split(' ')[0] || '';
   const lastName = name.split(' ').slice(1).join(' ') || '';
+
+  if (loadingProfile) return <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div>
@@ -382,7 +404,7 @@ function MeusDados({ user }: { user: CustomerUser }) {
         <h3 className="text-sm font-semibold text-gray-800 mb-2">Newsletter</h3>
         <p className="text-xs text-gray-500 mb-3">Você quer receber e-mails com promoções e novidades da Óticas Master?</p>
         <label className="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" className="mt-0.5 w-4 h-4 accent-gold rounded" />
+          <input type="checkbox" checked={newsletter} onChange={e => setNewsletter(e.target.checked)} className="mt-0.5 w-4 h-4 accent-gold rounded" />
           <span className="text-xs text-gray-600">Aceito receber comunicações promocionais e de marketing da Óticas Master. Você pode cancelar a qualquer momento.</span>
         </label>
       </div>
