@@ -496,8 +496,8 @@ function Enderecos() {
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState('');
 
-  const handleCepBlur = async () => {
-    const cleanCep = cep.replace(/\D/g, '');
+  const buscarCep = async (valor: string) => {
+    const cleanCep = valor.replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
     setLoadingCep(true);
     setCepError('');
@@ -511,6 +511,13 @@ function Enderecos() {
       setEstado(data.uf || '');
     } catch { setCepError('Erro ao buscar CEP'); }
     finally { setLoadingCep(false); }
+  };
+
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = e.target.value;
+    setCep(valor);
+    const cleanCep = valor.replace(/\D/g, '');
+    if (cleanCep.length === 8) buscarCep(valor);
   };
 
   const handleSaveAddress = () => {
@@ -581,7 +588,7 @@ function Enderecos() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">CEP *</label>
               <div className="relative">
-                <input type="text" value={cep} onChange={e => setCep(e.target.value)} onBlur={handleCepBlur}
+                <input type="text" value={cep} onChange={handleCepChange}
                   placeholder="00000-000" maxLength={9}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
                 {loadingCep && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">Buscando...</span>}
