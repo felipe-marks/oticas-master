@@ -18,7 +18,7 @@ function verifyAdminToken(token) {
     if (sig !== expectedSig) return null;
     const payload = JSON.parse(Buffer.from(body, 'base64url').toString());
     if (payload.exp < Date.now()) return null;
-    if (payload.role !== 'admin') return null;
+    if (payload.role !== 'admin' && payload.role !== 'super_admin') return null;
     return payload;
   } catch { return null; }
 }
