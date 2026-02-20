@@ -95,11 +95,19 @@ function AuthForm() {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Validação de força da senha
+  const passwordChecks = {
+    length: password.length >= 8,
+    upper: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+  };
+  const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,8 +118,8 @@ function AuthForm() {
         await login(email, password);
       } else {
         if (!name.trim()) throw new Error('Informe seu nome completo');
-        if (password.length < 6) throw new Error('A senha deve ter pelo menos 6 caracteres');
-        await register(name, email, password, phone);
+        if (passwordStrength < 4) throw new Error('A senha não atende aos requisitos de segurança abaixo.');
+        await register(name, email, password);
       }
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro. Tente novamente.');
@@ -185,21 +193,7 @@ function AuthForm() {
               </div>
             </div>
 
-            {mode === 'register' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Telefone (opcional)</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={e => setPhone(e.target.value)}
-                    placeholder="(94) 99999-9999"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
-                  />
-                </div>
-              </div>
-            )}
+
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
@@ -209,7 +203,7 @@ function AuthForm() {
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder={mode === 'register' ? 'Mínimo 6 caracteres' : 'Sua senha'}
+                  placeholder={mode === 'register' ? 'Ex: Senha@123' : 'Sua senha'}
                   required
                   className="w-full pl-10 pr-10 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold text-sm"
                 />
@@ -218,6 +212,25 @@ function AuthForm() {
                 </button>
               </div>
             </div>
+
+            {mode === 'register' && password.length > 0 && (
+              <div className="space-y-1.5 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <p className="text-xs font-medium text-gray-600 mb-2">Requisitos da senha:</p>
+                {[
+                  { check: passwordChecks.length, label: 'Mínimo 8 caracteres' },
+                  { check: passwordChecks.upper, label: 'Pelo menos uma letra maiúscula' },
+                  { check: passwordChecks.number, label: 'Pelo menos um número' },
+                  { check: passwordChecks.symbol, label: 'Pelo menos um símbolo (!@#$%...)' },
+                ].map(({ check, label }) => (
+                  <div key={label} className={`flex items-center gap-2 text-xs ${check ? 'text-green-600' : 'text-gray-400'}`}>
+                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${check ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-400'}`}>
+                      {check ? '✓' : '○'}
+                    </span>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">

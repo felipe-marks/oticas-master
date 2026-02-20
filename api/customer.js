@@ -42,6 +42,16 @@ function requireCustomerAuth(req, res) {
   return payload;
 }
 
+// Validação de senha segura
+function validatePassword(password) {
+  const errors = [];
+  if (password.length < 8) errors.push('mínimo 8 caracteres');
+  if (!/[A-Z]/.test(password)) errors.push('pelo menos uma letra maiúscula');
+  if (!/[0-9]/.test(password)) errors.push('pelo menos um número');
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) errors.push('pelo menos um símbolo (!@#$%...)');
+  return errors;
+}
+
 export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -50,18 +60,39 @@ export default async function handler(req, res) {
 
   // ===== REGISTRO =====
   if (action === 'register' && req.method === 'POST') {
-    const { name, email, password, phone } = req.body;
-    if (!name || !email || !password) return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios' });
-    if (password.length < 6) return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres' });
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios' });
+    }
+
+    // Validação de senha segura
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({
+        message: `A senha precisa ter: ${passwordErrors.join(', ')}.`
+      });
+    }
 
     // Verificar se e-mail já existe
-    const { data: existing } = await supabase.from('customers').select('id').eq('email', email.toLowerCase()).single();
-    if (existing) return res.status(409).json({ message: 'Este e-mail já está cadastrado. Faça login.' });
+    const { data: existing } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(409).json({ message: 'Este e-mail já está cadastrado. Faça login.' });
+    }
 
     const passwordHash = hashPassword(password);
     const { data: customer, error } = await supabase
       .from('customers')
-      .insert({ name: name.trim(), email: email.toLowerCase().trim(), phone: phone || null, password_hash: passwordHash })
+      .insert({
+        name: name.trim(),
+        email: email.toLowerCase().trim(),
+        phone: null,
+        password_hash: passwordHash
+      })
       .select('id, name, email, phone, created_at')
       .single();
 
@@ -74,19 +105,27 @@ export default async function handler(req, res) {
   // ===== LOGIN =====
   if (action === 'login' && req.method === 'POST') {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
+    }
 
     const { data: customer, error } = await supabase
       .from('customers')
       .select('id, name, email, phone, password_hash, active')
       .eq('email', email.toLowerCase().trim())
-      .single();
+      .maybeSingle();
 
-    if (error || !customer) return res.status(401).json({ message: 'E-mail ou senha incorretos' });
-    if (!customer.active) return res.status(403).json({ message: 'Conta desativada. Entre em contato com a loja.' });
+    if (error || !customer) {
+      return res.status(401).json({ message: 'E-mail ou senha incorretos' });
+    }
+    if (!customer.active) {
+      return res.status(403).json({ message: 'Conta desativada. Entre em contato com a loja.' });
+    }
 
     const passwordHash = hashPassword(password);
-    if (customer.password_hash !== passwordHash) return res.status(401).json({ message: 'E-mail ou senha incorretos' });
+    if (customer.password_hash !== passwordHash) {
+      return res.status(401).json({ message: 'E-mail ou senha incorretos' });
+    }
 
     const { password_hash, ...safeCustomer } = customer;
     const token = generateToken({ id: customer.id, email: customer.email, name: customer.name, role: 'customer' });
@@ -125,7 +164,7 @@ export default async function handler(req, res) {
     if (!payload) return;
 
     const { name, phone } = req.body;
-    const updates: any = {};
+    const updates = {};
     if (name) updates.name = name.trim();
     if (phone !== undefined) updates.phone = phone || null;
 
