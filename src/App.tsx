@@ -13,9 +13,10 @@ import { CartDrawer } from './components/CartDrawer';
 import { CartProvider } from './contexts/CartContext';
 import { AdminApp } from './pages/admin/AdminApp';
 
-// Lazy load para páginas de produto e categoria
+// Lazy load para páginas de produto, categoria e área do cliente
 const ProductPage = lazy(() => import('./pages/ProductPage'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
+const CustomerArea = lazy(() => import('./pages/CustomerArea'));
 
 function LoadingSpinner() {
   return (
@@ -32,6 +33,15 @@ function Router() {
   // Rota do painel admin
   if (path.startsWith('/admin')) {
     return <AdminApp />;
+  }
+
+  // Rota da área do cliente
+  if (path.startsWith('/minha-conta')) {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <CustomerArea />
+      </Suspense>
+    );
   }
 
   // Rota de produto individual: /produto/nome-do-produto

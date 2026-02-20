@@ -82,9 +82,9 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-3 md:gap-4 text-gray-main">
-                <button className="hidden sm:block hover:text-gold transition-colors">
+                <a href="/minha-conta" className="hidden sm:block hover:text-gold transition-colors" title="Minha Conta">
                   <User className="w-6 h-6" />
-                </button>
+                </a>
                 <button className="relative hover:text-gold transition-colors">
                   <Heart className="w-6 h-6" />
                   <span className="absolute -top-1 -right-1 bg-gold text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">0</span>
