@@ -485,36 +485,144 @@ function Favoritos() {
 // ===== SEÇÃO: ENDEREÇOS =====
 function Enderecos() {
   const [adding, setAdding] = useState(false);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [cep, setCep] = useState('');
+  const [rua, setRua] = useState('');
+  const [numero, setNumero] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
+  const [loadingCep, setLoadingCep] = useState(false);
+  const [cepError, setCepError] = useState('');
+
+  const handleCepBlur = async () => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+    setLoadingCep(true);
+    setCepError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+      if (data.erro) { setCepError('CEP não encontrado'); return; }
+      setRua(data.logradouro || '');
+      setBairro(data.bairro || '');
+      setCidade(data.localidade || '');
+      setEstado(data.uf || '');
+    } catch { setCepError('Erro ao buscar CEP'); }
+    finally { setLoadingCep(false); }
+  };
+
+  const handleSaveAddress = () => {
+    if (!cep || !rua || !numero || !cidade) return;
+    const newAddr = { id: Date.now(), cep, rua, numero, complemento, bairro, cidade, estado };
+    const updated = [...addresses, newAddr];
+    setAddresses(updated);
+    localStorage.setItem('oticas_addresses', JSON.stringify(updated));
+    setAdding(false);
+    setCep(''); setRua(''); setNumero(''); setComplemento(''); setBairro(''); setCidade(''); setEstado('');
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('oticas_addresses');
+    if (saved) try { setAddresses(JSON.parse(saved)); } catch {}
+  }, []);
+
+  const handleRemove = (id: number) => {
+    const updated = addresses.filter(a => a.id !== id);
+    setAddresses(updated);
+    localStorage.setItem('oticas_addresses', JSON.stringify(updated));
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Endereços</h2>
-        <button onClick={() => setAdding(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">
-          + Adicionar Endereço
-        </button>
+        {!adding && (
+          <button onClick={() => setAdding(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">
+            + Adicionar Endereço
+          </button>
+        )}
       </div>
-      {!adding ? (
+
+      {addresses.length > 0 && (
+        <div className="space-y-3 mb-6">
+          {addresses.map(addr => (
+            <div key={addr.id} className="flex items-start justify-between p-4 border border-gray-200 rounded-xl hover:border-gold/40 transition-colors">
+              <div className="flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-gold mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{addr.rua}, {addr.numero}{addr.complemento ? `, ${addr.complemento}` : ''}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{addr.bairro} — {addr.cidade}/{addr.estado}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">CEP: {addr.cep}</p>
+                </div>
+              </div>
+              <button onClick={() => handleRemove(addr.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!adding && addresses.length === 0 && (
         <div className="text-center py-16">
           <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 font-medium">Nenhum endereço cadastrado</p>
           <p className="text-gray-400 text-sm mt-1">Adicione um endereço para facilitar suas compras</p>
         </div>
-      ) : (
+      )}
+
+      {adding && (
         <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
           <h3 className="font-semibold text-gray-800 mb-4">Novo Endereço</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {['CEP', 'Rua', 'Número', 'Complemento', 'Bairro', 'Cidade', 'Estado'].map(field => (
-              <div key={field} className={field === 'Rua' ? 'md:col-span-2' : ''}>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{field}</label>
-                <input type="text" placeholder={field}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">CEP *</label>
+              <div className="relative">
+                <input type="text" value={cep} onChange={e => setCep(e.target.value)} onBlur={handleCepBlur}
+                  placeholder="00000-000" maxLength={9}
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+                {loadingCep && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">Buscando...</span>}
               </div>
-            ))}
+              {cepError && <p className="text-xs text-red-500 mt-1">{cepError}</p>}
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Rua *</label>
+              <input type="text" value={rua} onChange={e => setRua(e.target.value)} placeholder="Nome da rua"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Número *</label>
+              <input type="text" value={numero} onChange={e => setNumero(e.target.value)} placeholder="Ex: 123"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Complemento</label>
+              <input type="text" value={complemento} onChange={e => setComplemento(e.target.value)} placeholder="Apto, Bloco..."
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Bairro</label>
+              <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} placeholder="Bairro"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Cidade *</label>
+              <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estado</label>
+              <input type="text" value={estado} onChange={e => setEstado(e.target.value)} placeholder="UF" maxLength={2}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={() => setAdding(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-            <button className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">Salvar Endereço</button>
+            <button onClick={handleSaveAddress} disabled={!cep || !rua || !numero || !cidade}
+              className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Salvar Endereço</button>
           </div>
         </div>
       )}
@@ -564,9 +672,20 @@ function MeuAcesso({ user }: { user: CustomerUser }) {
     setError('');
     if (passwordStrength < 4) { setError('A nova senha não atende aos requisitos de segurança.'); return; }
     if (newPass !== confirmPass) { setError('As senhas não coincidem.'); return; }
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-    setCurrentPass(''); setNewPass(''); setConfirmPass('');
+    try {
+      const res = await fetch('/api/customer?action=change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ currentPassword: currentPass, newPassword: newPass }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Erro ao alterar senha');
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      setCurrentPass(''); setNewPass(''); setConfirmPass('');
+    } catch (err: any) {
+      setError(err.message || 'Erro ao alterar senha. Tente novamente.');
+    }
   };
 
   return (

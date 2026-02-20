@@ -179,6 +179,48 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   }
 
+  // ===== ALTERAR SENHA =====
+  if (action === 'change-password' && req.method === 'POST') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: 'Senha atual e nova senha são obrigatórias' });
+    }
+
+    // Validar nova senha
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ message: `A nova senha precisa ter: ${passwordErrors.join(', ')}.` });
+    }
+
+    // Verificar senha atual
+    const { data: customer, error: fetchError } = await supabase
+      .from('customers')
+      .select('password_hash')
+      .eq('id', payload.id)
+      .single();
+
+    if (fetchError || !customer) {
+      return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    const currentHash = hashPassword(currentPassword);
+    if (customer.password_hash !== currentHash) {
+      return res.status(401).json({ message: 'Senha atual incorreta' });
+    }
+
+    const newHash = hashPassword(newPassword);
+    const { error: updateError } = await supabase
+      .from('customers')
+      .update({ password_hash: newHash })
+      .eq('id', payload.id);
+
+    if (updateError) return res.status(500).json({ message: updateError.message });
+    return res.status(200).json({ message: 'Senha alterada com sucesso!' });
+  }
+
   // ===== VERIFICAR TOKEN =====
   if (action === 'verify' && req.method === 'GET') {
     const payload = requireCustomerAuth(req, res);

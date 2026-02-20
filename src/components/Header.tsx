@@ -28,7 +28,7 @@ export const Header: React.FC = () => {
   }, []);
 
   // Verificar se cliente está logado
-  useEffect(() => {
+  const checkCustomerAuth = React.useCallback(() => {
     const saved = localStorage.getItem('oticas_customer');
     if (saved) {
       try {
@@ -37,10 +37,28 @@ export const Header: React.FC = () => {
           setCustomerUser({ name: parsed.name, email: parsed.email });
         } else {
           localStorage.removeItem('oticas_customer');
+          setCustomerUser(null);
         }
-      } catch { localStorage.removeItem('oticas_customer'); }
+      } catch {
+        localStorage.removeItem('oticas_customer');
+        setCustomerUser(null);
+      }
+    } else {
+      setCustomerUser(null);
     }
   }, []);
+
+  useEffect(() => {
+    checkCustomerAuth();
+    // Escutar mudanças no localStorage (login/logout em outras abas)
+    window.addEventListener('storage', checkCustomerAuth);
+    // Verificar a cada 1 segundo para capturar login na mesma aba
+    const interval = setInterval(checkCustomerAuth, 1000);
+    return () => {
+      window.removeEventListener('storage', checkCustomerAuth);
+      clearInterval(interval);
+    };
+  }, [checkCustomerAuth]);
 
   // Fechar dropdown ao clicar fora
   useEffect(() => {
