@@ -14,9 +14,12 @@ interface DashboardData {
   recent_orders: any[];
 }
 
-function StatCard({ title, value, subtitle, icon: Icon, color, trend }: any) {
+function StatCard({ title, value, subtitle, icon: Icon, color, trend, onClick }: any) {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+    <div
+      className={`bg-white rounded-xl p-5 shadow-sm border border-gray-100 transition-all ${onClick ? 'cursor-pointer hover:shadow-md hover:border-amber-200 hover:scale-[1.02]' : ''}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-gray-500 font-medium">{title}</p>
@@ -33,6 +36,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color, trend }: any) {
           {Math.abs(trend)}% em relação ao mês anterior
         </div>
       )}
+      {onClick && <p className="text-[10px] text-amber-600 mt-2 font-medium">Clique para ver detalhes &rarr;</p>}
     </div>
   );
 }
@@ -51,7 +55,7 @@ const statusLabels: Record<string, string> = {
   shipped: 'Enviado', delivered: 'Entregue', cancelled: 'Cancelado',
 };
 
-export function Dashboard() {
+export function Dashboard({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -88,6 +92,7 @@ export function Dashboard() {
           icon={DollarSign}
           color="bg-green-500"
           trend={data.revenue.growth_percent}
+          onClick={onNavigate ? () => onNavigate('orders') : undefined}
         />
         <StatCard
           title="Pedidos Pendentes"
@@ -95,6 +100,7 @@ export function Dashboard() {
           subtitle={`${data.orders.this_month} pedidos este mês`}
           icon={ShoppingCart}
           color="bg-amber-500"
+          onClick={onNavigate ? () => onNavigate('orders') : undefined}
         />
         <StatCard
           title="Produtos Ativos"
@@ -102,6 +108,7 @@ export function Dashboard() {
           subtitle={data.products.low_stock > 0 ? `⚠ ${data.products.low_stock} com estoque baixo` : 'Estoque OK'}
           icon={Package}
           color="bg-blue-500"
+          onClick={onNavigate ? () => onNavigate('products') : undefined}
         />
         <StatCard
           title="Clientes"
@@ -109,6 +116,7 @@ export function Dashboard() {
           subtitle={`+${data.customers.new_this_month} novos este mês`}
           icon={Users}
           color="bg-purple-500"
+          onClick={onNavigate ? () => onNavigate('customers') : undefined}
         />
       </div>
 
@@ -120,6 +128,7 @@ export function Dashboard() {
           subtitle="Assinantes ativos"
           icon={Mail}
           color="bg-pink-500"
+          onClick={onNavigate ? () => onNavigate('newsletter') : undefined}
         />
         <StatCard
           title="Agendamentos"
@@ -127,6 +136,7 @@ export function Dashboard() {
           subtitle="Aguardando confirmação"
           icon={Calendar}
           color="bg-teal-500"
+          onClick={onNavigate ? () => onNavigate('appointments') : undefined}
         />
         <StatCard
           title="Estoque Baixo"
@@ -134,6 +144,7 @@ export function Dashboard() {
           subtitle="Produtos com menos de 5 unidades"
           icon={AlertTriangle}
           color="bg-red-500"
+          onClick={onNavigate ? () => onNavigate('products') : undefined}
         />
       </div>
 

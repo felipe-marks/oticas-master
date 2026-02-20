@@ -38,7 +38,7 @@ function AdminContent() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard': return <Dashboard />;
+      case 'dashboard': return <Dashboard onNavigate={setCurrentPage} />;
       case 'products': return <Products />;
       case 'orders': return <Orders />;
       case 'promotions': return <Promotions />;

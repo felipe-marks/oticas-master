@@ -65,15 +65,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios' });
     }
 
-    // Validação de senha segura
     const passwordErrors = validatePassword(password);
     if (passwordErrors.length > 0) {
-      return res.status(400).json({
-        message: `A senha precisa ter: ${passwordErrors.join(', ')}.`
-      });
+      return res.status(400).json({ message: `A senha precisa ter: ${passwordErrors.join(', ')}.` });
     }
 
-    // Verificar se e-mail já existe
     const { data: existing } = await supabase
       .from('customers')
       .select('id')
@@ -150,11 +146,7 @@ export default async function handler(req, res) {
 
     if (error) return res.status(500).json({ message: error.message });
 
-    const formatted = (orders || []).map(o => ({
-      ...o,
-      items: o.order_items || [],
-    }));
-
+    const formatted = (orders || []).map(o => ({ ...o, items: o.order_items || [] }));
     return res.status(200).json(formatted);
   }
 
@@ -189,13 +181,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Senha atual e nova senha são obrigatórias' });
     }
 
-    // Validar nova senha
     const passwordErrors = validatePassword(newPassword);
     if (passwordErrors.length > 0) {
       return res.status(400).json({ message: `A nova senha precisa ter: ${passwordErrors.join(', ')}.` });
     }
 
-    // Verificar senha atual
     const { data: customer, error: fetchError } = await supabase
       .from('customers')
       .select('password_hash')
@@ -226,6 +216,181 @@ export default async function handler(req, res) {
     const payload = requireCustomerAuth(req, res);
     if (!payload) return;
     return res.status(200).json({ valid: true, user: { id: payload.id, name: payload.name, email: payload.email } });
+  }
+
+  // ===== ENDEREÇOS =====
+
+  // Listar endereços
+  if (action === 'addresses' && req.method === 'GET') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { data, error } = await supabase
+      .from('customer_addresses')
+      .select('*')
+      .eq('customer_id', payload.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ message: error.message });
+    return res.status(200).json(data || []);
+  }
+
+  // Adicionar endereço
+  if (action === 'addresses' && req.method === 'POST') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { cep, rua, numero, complemento, bairro, cidade, estado } = req.body;
+    if (!cep || !rua || !numero || !cidade) {
+      return res.status(400).json({ message: 'CEP, rua, número e cidade são obrigatórios' });
+    }
+
+    const { data, error } = await supabase
+      .from('customer_addresses')
+      .insert({ customer_id: payload.id, cep, rua, numero, complemento: complemento || null, bairro: bairro || null, cidade, estado: estado || null })
+      .select('*')
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+    return res.status(201).json(data);
+  }
+
+  // Remover endereço
+  if (action === 'addresses' && req.method === 'DELETE') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ message: 'ID do endereço é obrigatório' });
+
+    const { error } = await supabase
+      .from('customer_addresses')
+      .delete()
+      .eq('id', id)
+      .eq('customer_id', payload.id); // Garantir que só remove o próprio endereço
+
+    if (error) return res.status(400).json({ message: error.message });
+    return res.status(200).json({ message: 'Endereço removido' });
+  }
+
+  // ===== FAVORITOS =====
+
+  // Listar favoritos
+  if (action === 'favorites' && req.method === 'GET') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { data, error } = await supabase
+      .from('customer_favorites')
+      .select('*')
+      .eq('customer_id', payload.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ message: error.message });
+    return res.status(200).json(data || []);
+  }
+
+  // Adicionar favorito
+  if (action === 'favorites' && req.method === 'POST') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { product_id, product_name, product_image, product_price, product_slug } = req.body;
+    if (!product_id) return res.status(400).json({ message: 'ID do produto é obrigatório' });
+
+    // Verificar se já existe
+    const { data: existing } = await supabase
+      .from('customer_favorites')
+      .select('id')
+      .eq('customer_id', payload.id)
+      .eq('product_id', product_id)
+      .maybeSingle();
+
+    if (existing) {
+      return res.status(409).json({ message: 'Produto já está nos favoritos' });
+    }
+
+    const { data, error } = await supabase
+      .from('customer_favorites')
+      .insert({ customer_id: payload.id, product_id, product_name, product_image, product_price, product_slug })
+      .select('*')
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+    return res.status(201).json(data);
+  }
+
+  // Remover favorito
+  if (action === 'favorites' && req.method === 'DELETE') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { product_id } = req.body;
+    if (!product_id) return res.status(400).json({ message: 'ID do produto é obrigatório' });
+
+    const { error } = await supabase
+      .from('customer_favorites')
+      .delete()
+      .eq('customer_id', payload.id)
+      .eq('product_id', product_id);
+
+    if (error) return res.status(400).json({ message: error.message });
+    return res.status(200).json({ message: 'Favorito removido' });
+  }
+
+  // ===== CARTÕES =====
+
+  // Listar cartões
+  if (action === 'cards' && req.method === 'GET') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { data, error } = await supabase
+      .from('customer_cards')
+      .select('*')
+      .eq('customer_id', payload.id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ message: error.message });
+    return res.status(200).json(data || []);
+  }
+
+  // Adicionar cartão (apenas dados não sensíveis — últimos 4 dígitos, bandeira, nome)
+  if (action === 'cards' && req.method === 'POST') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { card_brand, last_four, holder_name, expiry_month, expiry_year } = req.body;
+    if (!card_brand || !last_four || !holder_name) {
+      return res.status(400).json({ message: 'Bandeira, últimos 4 dígitos e nome do titular são obrigatórios' });
+    }
+
+    const { data, error } = await supabase
+      .from('customer_cards')
+      .insert({ customer_id: payload.id, card_brand, last_four, holder_name, expiry_month, expiry_year })
+      .select('*')
+      .single();
+
+    if (error) return res.status(400).json({ message: error.message });
+    return res.status(201).json(data);
+  }
+
+  // Remover cartão
+  if (action === 'cards' && req.method === 'DELETE') {
+    const payload = requireCustomerAuth(req, res);
+    if (!payload) return;
+
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ message: 'ID do cartão é obrigatório' });
+
+    const { error } = await supabase
+      .from('customer_cards')
+      .delete()
+      .eq('id', id)
+      .eq('customer_id', payload.id);
+
+    if (error) return res.status(400).json({ message: error.message });
+    return res.status(200).json({ message: 'Cartão removido' });
   }
 
   return res.status(404).json({ message: 'Ação não encontrada' });

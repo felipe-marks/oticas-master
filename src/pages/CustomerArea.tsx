@@ -468,24 +468,67 @@ function MeusPedidos({ user }: { user: CustomerUser }) {
 }
 
 // ===== SEÇÃO: FAVORITOS =====
-function Favoritos() {
+function Favoritos({ user }: { user: CustomerUser }) {
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/customer?action=favorites', { headers: { Authorization: `Bearer ${user.token}` } })
+      .then(r => r.json())
+      .then(data => { setFavorites(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [user.token]);
+
+  const handleRemove = async (productId: string) => {
+    try {
+      await fetch('/api/customer?action=favorites', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ product_id: productId }),
+      });
+      setFavorites(prev => prev.filter(f => f.product_id !== productId));
+    } catch {}
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
+
   return (
     <div>
       <h2 className="text-xl font-bold text-gray-900 mb-6">Favoritos</h2>
-      <div className="text-center py-16">
-        <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 font-medium">Você ainda não tem favoritos</p>
-        <p className="text-gray-400 text-sm mt-1">Clique no coração nos produtos para salvá-los aqui</p>
-        <a href="/" className="inline-block mt-4 px-6 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold/90 transition-colors">Explorar Produtos</a>
-      </div>
+      {favorites.length === 0 ? (
+        <div className="text-center py-16">
+          <Heart className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Você ainda não tem favoritos</p>
+          <p className="text-gray-400 text-sm mt-1">Clique no coração nos produtos para salvá-los aqui</p>
+          <a href="/" className="inline-block mt-4 px-6 py-2.5 bg-gold text-white rounded-xl text-sm font-semibold hover:bg-gold/90 transition-colors">Explorar Produtos</a>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {favorites.map(fav => (
+            <div key={fav.id} className="border border-gray-200 rounded-xl p-4 flex gap-4 hover:border-gold/40 transition-colors">
+              {fav.product_image && <img src={fav.product_image} alt={fav.product_name} className="w-20 h-20 object-cover rounded-lg border border-gray-100" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-gray-800 truncate">{fav.product_name || 'Produto'}</p>
+                {fav.product_price && <p className="text-sm text-gold font-bold mt-1">R$ {Number(fav.product_price).toFixed(2).replace('.', ',')}</p>}
+                <div className="flex gap-2 mt-2">
+                  {fav.product_slug && <a href={`/produto/${fav.product_slug}`} className="text-xs text-gold hover:underline">Ver produto</a>}
+                  <button onClick={() => handleRemove(fav.product_id)} className="text-xs text-red-500 hover:underline">Remover</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 // ===== SEÇÃO: ENDEREÇOS =====
-function Enderecos() {
+function Enderecos({ user }: { user: CustomerUser }) {
   const [adding, setAdding] = useState(false);
   const [addresses, setAddresses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [cep, setCep] = useState('');
   const [rua, setRua] = useState('');
   const [numero, setNumero] = useState('');
@@ -495,6 +538,13 @@ function Enderecos() {
   const [estado, setEstado] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepError, setCepError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/customer?action=addresses', { headers: { Authorization: `Bearer ${user.token}` } })
+      .then(r => r.json())
+      .then(data => { setAddresses(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [user.token]);
 
   const buscarCep = async (valor: string) => {
     const cleanCep = valor.replace(/\D/g, '');
@@ -520,26 +570,37 @@ function Enderecos() {
     if (cleanCep.length === 8) buscarCep(valor);
   };
 
-  const handleSaveAddress = () => {
+  const handleSaveAddress = async () => {
     if (!cep || !rua || !numero || !cidade) return;
-    const newAddr = { id: Date.now(), cep, rua, numero, complemento, bairro, cidade, estado };
-    const updated = [...addresses, newAddr];
-    setAddresses(updated);
-    localStorage.setItem('oticas_addresses', JSON.stringify(updated));
-    setAdding(false);
-    setCep(''); setRua(''); setNumero(''); setComplemento(''); setBairro(''); setCidade(''); setEstado('');
+    setSaving(true);
+    try {
+      const res = await fetch('/api/customer?action=addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ cep, rua, numero, complemento, bairro, cidade, estado }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAddresses(prev => [data, ...prev]);
+        setAdding(false);
+        setCep(''); setRua(''); setNumero(''); setComplemento(''); setBairro(''); setCidade(''); setEstado('');
+      }
+    } catch {}
+    finally { setSaving(false); }
   };
 
-  useEffect(() => {
-    const saved = localStorage.getItem('oticas_addresses');
-    if (saved) try { setAddresses(JSON.parse(saved)); } catch {}
-  }, []);
-
-  const handleRemove = (id: number) => {
-    const updated = addresses.filter(a => a.id !== id);
-    setAddresses(updated);
-    localStorage.setItem('oticas_addresses', JSON.stringify(updated));
+  const handleRemove = async (id: string) => {
+    try {
+      await fetch('/api/customer?action=addresses', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ id }),
+      });
+      setAddresses(prev => prev.filter(a => a.id !== id));
+    } catch {}
   };
+
+  if (loading) return <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div>
@@ -628,8 +689,8 @@ function Enderecos() {
           </div>
           <div className="flex gap-3 mt-4">
             <button onClick={() => setAdding(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
-            <button onClick={handleSaveAddress} disabled={!cep || !rua || !numero || !cidade}
-              className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Salvar Endereço</button>
+            <button onClick={handleSaveAddress} disabled={!cep || !rua || !numero || !cidade || saving}
+              className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{saving ? 'Salvando...' : 'Salvar Endereço'}</button>
           </div>
         </div>
       )}
@@ -638,20 +699,140 @@ function Enderecos() {
 }
 
 // ===== SEÇÃO: CARTÕES =====
-function Cartoes() {
+function Cartoes({ user }: { user: CustomerUser }) {
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [cardBrand, setCardBrand] = useState('');
+  const [lastFour, setLastFour] = useState('');
+  const [holderName, setHolderName] = useState('');
+  const [expiryMonth, setExpiryMonth] = useState('');
+  const [expiryYear, setExpiryYear] = useState('');
+
+  useEffect(() => {
+    fetch('/api/customer?action=cards', { headers: { Authorization: `Bearer ${user.token}` } })
+      .then(r => r.json())
+      .then(data => { setCards(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [user.token]);
+
+  const handleSaveCard = async () => {
+    if (!cardBrand || !lastFour || !holderName) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/customer?action=cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ card_brand: cardBrand, last_four: lastFour, holder_name: holderName, expiry_month: expiryMonth ? parseInt(expiryMonth) : null, expiry_year: expiryYear ? parseInt(expiryYear) : null }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCards(prev => [data, ...prev]);
+        setAdding(false);
+        setCardBrand(''); setLastFour(''); setHolderName(''); setExpiryMonth(''); setExpiryYear('');
+      }
+    } catch {}
+    finally { setSaving(false); }
+  };
+
+  const handleRemove = async (id: string) => {
+    try {
+      await fetch('/api/customer?action=cards', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ id }),
+      });
+      setCards(prev => prev.filter(c => c.id !== id));
+    } catch {}
+  };
+
+  if (loading) return <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>;
+
+  const brandIcons: Record<string, string> = { visa: 'VISA', mastercard: 'MC', elo: 'ELO', amex: 'AMEX', hipercard: 'HIPER' };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Cartões</h2>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">
-          + Adicionar Cartão
-        </button>
+        {!adding && (
+          <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors">
+            + Adicionar Cartão
+          </button>
+        )}
       </div>
-      <div className="text-center py-16">
-        <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <p className="text-gray-500 font-medium">Nenhum cartão cadastrado</p>
-        <p className="text-gray-400 text-sm mt-1">Seus cartões salvos aparecerão aqui para compras mais rápidas</p>
-      </div>
+
+      {adding && (
+        <div className="border border-gray-200 rounded-xl p-5 mb-6">
+          <h3 className="font-semibold text-gray-800 mb-4">Novo Cartão</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Bandeira *</label>
+              <select value={cardBrand} onChange={e => setCardBrand(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold">
+                <option value="">Selecione</option>
+                <option value="visa">Visa</option>
+                <option value="mastercard">Mastercard</option>
+                <option value="elo">Elo</option>
+                <option value="amex">American Express</option>
+                <option value="hipercard">Hipercard</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Últimos 4 dígitos *</label>
+              <input type="text" value={lastFour} onChange={e => setLastFour(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="1234" maxLength={4}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nome no cartão *</label>
+              <input type="text" value={holderName} onChange={e => setHolderName(e.target.value.toUpperCase())} placeholder="NOME COMO IMPRESSO NO CARTÃO"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Mês de validade</label>
+              <input type="number" value={expiryMonth} onChange={e => setExpiryMonth(e.target.value)} placeholder="MM" min={1} max={12}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Ano de validade</label>
+              <input type="number" value={expiryYear} onChange={e => setExpiryYear(e.target.value)} placeholder="AAAA" min={2024} max={2040}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold" />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <button onClick={() => setAdding(false)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">Cancelar</button>
+            <button onClick={handleSaveCard} disabled={!cardBrand || !lastFour || !holderName || saving}
+              className="px-4 py-2 bg-gold text-white rounded-lg text-sm font-medium hover:bg-gold/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">{saving ? 'Salvando...' : 'Salvar Cartão'}</button>
+          </div>
+        </div>
+      )}
+
+      {cards.length === 0 && !adding ? (
+        <div className="text-center py-16">
+          <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 font-medium">Nenhum cartão cadastrado</p>
+          <p className="text-gray-400 text-sm mt-1">Seus cartões salvos aparecerão aqui para compras mais rápidas</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {cards.map(card => (
+            <div key={card.id} className="flex items-center justify-between border border-gray-200 rounded-xl p-4 hover:border-gold/40 transition-colors">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-8 bg-gray-100 rounded flex items-center justify-center text-xs font-bold text-gray-600">
+                  {brandIcons[card.card_brand] || card.card_brand?.toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {card.card_brand?.charAt(0).toUpperCase() + card.card_brand?.slice(1)} **** {card.last_four}
+                  </p>
+                  <p className="text-xs text-gray-500">{card.holder_name}{card.expiry_month && card.expiry_year ? ` • ${String(card.expiry_month).padStart(2, '0')}/${card.expiry_year}` : ''}</p>
+                </div>
+              </div>
+              <button onClick={() => handleRemove(card.id)} className="text-xs text-red-500 hover:underline">Remover</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -800,10 +981,10 @@ function CustomerDashboard({ user }: { user: CustomerUser }) {
   const renderSection = () => {
     switch (activeSection) {
       case 'dados': return <MeusDados user={user} />;
-      case 'favoritos': return <Favoritos />;
-      case 'enderecos': return <Enderecos />;
+      case 'favoritos': return <Favoritos user={user} />;
+      case 'enderecos': return <Enderecos user={user} />;
       case 'pedidos': return <MeusPedidos user={user} />;
-      case 'cartoes': return <Cartoes />;
+      case 'cartoes': return <Cartoes user={user} />;
       case 'acesso': return <MeuAcesso user={user} />;
       case 'devolucoes': return <Devolucoes />;
       default: return <MeusDados user={user} />;
