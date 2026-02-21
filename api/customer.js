@@ -1,6 +1,7 @@
 // api/customer.js — Autenticação e área do cliente
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { sendWelcomeEmail, sendPasswordResetEmail } from './_email.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 const JWT_SECRET = process.env.JWT_SECRET || 'oticas-master-jwt-secret-2026-felipe-juliana-parauapebas-pa';
@@ -95,6 +96,11 @@ export default async function handler(req, res) {
     if (error) return res.status(400).json({ message: error.message });
 
     const token = generateToken({ id: customer.id, email: customer.email, name: customer.name, role: 'customer' });
+
+    // Enviar e-mail de boas-vindas (sem bloquear a resposta)
+    sendWelcomeEmail({ name: customer.name, email: customer.email })
+      .catch(err => console.error('[Email] Falha no e-mail de boas-vindas:', err.message));
+
     return res.status(201).json({ user: customer, token });
   }
 
@@ -410,6 +416,63 @@ export default async function handler(req, res) {
 
     if (error) return res.status(400).json({ message: error.message });
     return res.status(200).json({ message: 'Cartão removido' });
+  }
+
+  // ===== ESQUECI MINHA SENHA =====
+  if (action === 'forgot-password' && req.method === 'POST') {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'E-mail é obrigatório' });
+
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('id, name, email')
+      .eq('email', email.toLowerCase().trim())
+      .eq('active', true)
+      .maybeSingle();
+
+    // Sempre retornar sucesso para não revelar se o e-mail existe
+    if (!customer) {
+      return res.status(200).json({ message: 'Se este e-mail estiver cadastrado, você receberá as instruções em breve.' });
+    }
+
+    // Gerar token de reset (válido por 1 hora)
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await supabase
+      .from('password_reset_tokens')
+      .upsert({ customer_id: customer.id, token: resetToken, expires_at: expiresAt }, { onConflict: 'customer_id' });
+
+    sendPasswordResetEmail({ name: customer.name, email: customer.email, resetToken })
+      .catch(err => console.error('[Email] Falha no e-mail de reset:', err.message));
+
+    return res.status(200).json({ message: 'Se este e-mail estiver cadastrado, você receberá as instruções em breve.' });
+  }
+
+  // ===== REDEFINIR SENHA (com token) =====
+  if (action === 'reset-password' && req.method === 'POST') {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ message: 'Token e nova senha são obrigatórios' });
+
+    const passwordErrors = validatePassword(newPassword);
+    if (passwordErrors.length > 0) {
+      return res.status(400).json({ message: `A senha precisa ter: ${passwordErrors.join(', ')}.` });
+    }
+
+    const { data: resetData } = await supabase
+      .from('password_reset_tokens')
+      .select('customer_id, expires_at')
+      .eq('token', token)
+      .maybeSingle();
+
+    if (!resetData) return res.status(400).json({ message: 'Link inválido ou expirado.' });
+    if (new Date(resetData.expires_at) < new Date()) return res.status(400).json({ message: 'Este link expirou. Solicite um novo.' });
+
+    const newHash = hashPassword(newPassword);
+    await supabase.from('customers').update({ password_hash: newHash }).eq('id', resetData.customer_id);
+    await supabase.from('password_reset_tokens').delete().eq('token', token);
+
+    return res.status(200).json({ message: 'Senha redefinida com sucesso! Faça login com sua nova senha.' });
   }
 
   return res.status(404).json({ message: 'Ação não encontrada' });
