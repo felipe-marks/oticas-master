@@ -1,14 +1,6 @@
 // api/payment.js — Integração com PagBank para checkout transparente
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-const PAGBANK_TOKEN = process.env.PAGBANK_TOKEN;
-const PAGBANK_ENV = process.env.PAGBANK_ENV || 'sandbox';
-const PAGBANK_BASE_URL = PAGBANK_ENV === 'production'
-  ? 'https://api.pagseguro.com'
-  : 'https://sandbox.api.pagseguro.com';
-
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -22,6 +14,17 @@ function toCents(value) {
 export default async function handler(req, res) {
   cors(res);
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Inicializar clientes dentro do handler para garantir acesso às env vars
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+  const PAGBANK_TOKEN = process.env.PAGBANK_TOKEN;
+  const PAGBANK_ENV = process.env.PAGBANK_ENV || 'sandbox';
+  const PAGBANK_BASE_URL = PAGBANK_ENV === 'production'
+    ? 'https://api.pagseguro.com'
+    : 'https://sandbox.api.pagseguro.com';
 
   const { action } = req.query;
 
