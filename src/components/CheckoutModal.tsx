@@ -186,13 +186,10 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
     setError('');
 
     try {
-      // 1. Criar pedido no PagBank
+      // Criar pedido no PagBank (Pix ou Cartão em uma única chamada)
       const orderRes = await fetch('/api/payment?action=create-order', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken || ''}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           items: items.map(i => ({
             id: i.id,
@@ -203,41 +200,29 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
           })),
           customer,
           shipping_address: address,
-        }),
-      });
-
-      const orderData = await orderRes.json();
-
-      if (!orderRes.ok) {
-        throw new Error(orderData.message || 'Erro ao criar pedido');
-      }
-
-      // 2. Se cartão, processar pagamento
-      if (paymentMethod === 'credit_card' && orderData.pagbank_charge_id) {
-        const payRes = await fetch('/api/payment?action=pay-card', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${userToken || ''}`,
-          },
-          body: JSON.stringify({
-            pagbank_charge_id: orderData.pagbank_charge_id,
+          payment_method: paymentMethod === 'pix' ? 'pix' : 'credit_card',
+          ...(paymentMethod === 'credit_card' ? {
             card: {
               number: card.number.replace(/\s/g, ''),
               holder_name: card.holder_name,
               exp_month: card.exp_month,
               exp_year: card.exp_year,
               security_code: card.security_code,
-            },
-            installments: card.installments,
-          }),
-        });
+              installments: card.installments,
+            }
+          } : {}),
+        }),
+      });
 
-        const payData = await payRes.json();
-        if (!payRes.ok) {
-          throw new Error(payData.message || 'Pagamento recusado. Verifique os dados do cartão.');
-        }
-        orderData.card_status = payData.status;
+      const orderData = await orderRes.json();
+
+      if (!orderRes.ok) {
+        const detail = orderData.details?.[0]?.description || orderData.message || 'Erro ao criar pedido';
+        throw new Error(detail);
+      }
+
+      if (paymentMethod === 'credit_card' && orderData.card_status !== 'PAID') {
+        throw new Error('Pagamento recusado. Verifique os dados do cartão.');
       }
 
       setOrderResult(orderData);
