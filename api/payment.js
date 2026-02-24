@@ -45,9 +45,7 @@ export default async function handler(req, res) {
   // ─── POST /api/payment?action=create-order ─────────────────────────────────
   // Cria pedido no PagBank e retorna o ID para processar pagamento
   if (req.method === 'POST' && action === 'create-order') {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || !verifyToken(token)) return res.status(401).json({ message: 'Não autorizado' });
-
+    // Checkout disponível para visitantes e clientes logados (sem exigência de login)
     const { items, customer, shipping_address, coupon_code } = req.body;
 
     if (!items?.length || !customer) {
@@ -105,7 +103,7 @@ export default async function handler(req, res) {
         address: {
           street: shipping_address.street,
           number: shipping_address.number,
-          complement: shipping_address.complement || '',
+          ...(shipping_address.complement ? { complement: shipping_address.complement } : {}),
           locality: shipping_address.neighborhood,
           city: shipping_address.city,
           region_code: shipping_address.state,
@@ -200,9 +198,7 @@ export default async function handler(req, res) {
   // ─── POST /api/payment?action=pay-card ─────────────────────────────────────
   // Processa pagamento com cartão de crédito em uma cobrança existente
   if (req.method === 'POST' && action === 'pay-card') {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || !verifyToken(token)) return res.status(401).json({ message: 'Não autorizado' });
-
+    // Checkout disponível para visitantes e clientes logados (sem exigência de login)
     const { pagbank_charge_id, card, installments = 1 } = req.body;
 
     if (!pagbank_charge_id || !card) {
@@ -291,9 +287,6 @@ export default async function handler(req, res) {
 
   // ─── GET /api/payment?action=status&order_id=xxx ───────────────────────────
   if (req.method === 'GET' && action === 'status') {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token || !verifyToken(token)) return res.status(401).json({ message: 'Não autorizado' });
-
     const { order_id } = req.query;
     const { data, error } = await supabase.from('orders')
       .select('id, order_number, status, payment_status, total, pagbank_order_id')
