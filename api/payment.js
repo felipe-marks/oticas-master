@@ -185,7 +185,9 @@ export default async function handler(req, res) {
           unit_price: i.price,
           total_price: i.price * i.quantity,
         }));
-        await supabase.from('order_items').insert(orderItemsDB).catch(console.error);
+        try {
+          await supabase.from('order_items').insert(orderItemsDB);
+        } catch (e) { console.error('order_items error:', e); }
       }
 
       // Montar resposta
@@ -194,10 +196,11 @@ export default async function handler(req, res) {
 
       // Se cartão foi aprovado, atualizar status
       if (charge?.status === 'PAID' && order?.id) {
-        await supabase.from('orders')
-          .update({ payment_status: 'paid', status: 'confirmed' })
-          .eq('id', order.id)
-          .catch(console.error);
+        try {
+          await supabase.from('orders')
+            .update({ payment_status: 'paid', status: 'confirmed' })
+            .eq('id', order.id);
+        } catch (e) { console.error('update order error:', e); }
       }
 
       return res.status(201).json({
