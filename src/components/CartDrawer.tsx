@@ -1,9 +1,23 @@
-import React from 'react';
-import { X, ShoppingCart, Trash2, Plus, Minus, MessageCircle, ShoppingBag, Tag } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ShoppingCart, Trash2, Plus, Minus, MessageCircle, ShoppingBag, Tag, CreditCard } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { CheckoutModal } from './CheckoutModal';
 
 export function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, updateQty, clearCart, subtotal, totalItems } = useCart();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  // Obter token do cliente logado (se houver)
+  const getUserToken = () => {
+    try {
+      const saved = localStorage.getItem('oticas_customer');
+      if (saved) {
+        const u = JSON.parse(saved);
+        if (u.token && u.exp > Date.now()) return u.token;
+      }
+    } catch {}
+    return undefined;
+  };
 
   const formatCurrency = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -26,6 +40,11 @@ export function CartDrawer() {
       'Gostaria de finalizar este pedido. Poderia me ajudar com as formas de pagamento e entrega?',
     ].join('\n');
     window.open(`https://wa.me/5594981796065?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleCheckoutOnline = () => {
+    closeCart();
+    setCheckoutOpen(true);
   };
 
   const pixTotal = items.reduce((sum, i) => sum + (i.price_pix ?? i.price) * i.quantity, 0);
@@ -183,21 +202,43 @@ export function CartDrawer() {
               <p className="text-2xl font-bold text-gray-900">{formatCurrency(subtotal)}</p>
             </div>
 
-            {/* Botão Finalizar via WhatsApp */}
+            {/* Botão principal: Pagar Online */}
+            <button
+              onClick={handleCheckoutOnline}
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-gold text-white rounded-xl font-bold hover:bg-gold/90 active:scale-95 transition-all shadow-sm text-sm"
+            >
+              <CreditCard className="w-5 h-5" />
+              Pagar Online (Pix ou Cartão)
+            </button>
+
+            {/* Divisor */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-xs text-gray-400">ou</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Botão WhatsApp (secundário) */}
             <button
               onClick={handleCheckoutWhatsApp}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 active:scale-95 transition-all shadow-sm text-sm"
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-green-600 text-green-700 rounded-xl font-semibold hover:bg-green-50 active:scale-95 transition-all text-sm"
             >
               <MessageCircle className="w-5 h-5" />
-              Finalizar Pedido via WhatsApp
+              Finalizar via WhatsApp
             </button>
 
             <p className="text-center text-xs text-gray-400">
-              Você será redirecionado ao WhatsApp para confirmar o pedido e pagamento.
+              🔒 Pagamento seguro via PagBank
             </p>
           </div>
         )}
       </div>
+      {/* Modal de Checkout Transparente */}
+      <CheckoutModal
+        isOpen={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        userToken={getUserToken()}
+      />
     </>
   );
 }
