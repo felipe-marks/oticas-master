@@ -219,7 +219,10 @@ export default async function handler(req, res) {
 
     } catch (err) {
       console.error('Payment error:', err);
-      return res.status(500).json({ message: 'Erro interno ao processar pagamento' });
+      return res.status(500).json({ 
+        message: 'Erro interno ao processar pagamento',
+        debug: err.message || String(err)
+      });
     }
   }
 
