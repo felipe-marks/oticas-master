@@ -50,8 +50,8 @@ const CATEGORY_META: Record<string, { label: string; description: string; icon: 
     banner: 'from-pink-50 to-purple-50',
   },
   lentes: {
-    label: 'Lentes de Contato',
-    description: 'Lentes de alta qualidade para visão perfeita sem óculos. Conforto o dia todo.',
+    label: 'Lentes de Grau',
+    description: 'Escolha a lente ideal para montar seus óculos de grau. Lentes antirreflexo, fotossensíveis, progressivas e muito mais.',
     icon: <Zap className="w-8 h-8 text-gold" />,
     banner: 'from-teal-50 to-cyan-50',
   },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Upload, Loader2 } from 'lucide-react';
+import { X, Upload, Loader2, Plus, Trash2, Star } from 'lucide-react';
 
 interface ProductModalProps {
   product: any | null;
@@ -12,12 +12,34 @@ function getAuthHeader() {
   return { Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json' };
 }
 
+function getAuthToken() {
+  const s = JSON.parse(localStorage.getItem('admin_session') || '{}');
+  return s.token || '';
+}
+
 export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState(product?.main_image_url || '');
+
+  // ── Múltiplas imagens ──────────────────────────────────────────────────────
+  // Cada item: { url: string (já salva) | null, file: File | null, preview: string }
+  const buildInitialImages = () => {
+    const imgs: { url: string | null; file: File | null; preview: string }[] = [];
+    if (product?.main_image_url) {
+      imgs.push({ url: product.main_image_url, file: null, preview: product.main_image_url });
+    }
+    if (product?.images?.length) {
+      for (const u of product.images) {
+        if (u && u !== product.main_image_url) {
+          imgs.push({ url: u, file: null, preview: u });
+        }
+      }
+    }
+    return imgs;
+  };
+
+  const [images, setImages] = useState<{ url: string | null; file: File | null; preview: string }[]>(buildInitialImages);
 
   const [form, setForm] = useState({
     sku: product?.sku || '',
@@ -47,22 +69,36 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     fetch('/api/catalog?resource=categories').then(r => r.json()).then(setCategories);
   }, []);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  // Adicionar novas imagens selecionadas
+  const handleAddImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const newImgs = files.map(f => ({ url: null, file: f, preview: URL.createObjectURL(f) }));
+    setImages(prev => [...prev, ...newImgs]);
+    e.target.value = '';
   };
 
-  const uploadImage = async (): Promise<string | null> => {
-    if (!imageFile) return null;
+  // Remover imagem pelo índice
+  const removeImage = (idx: number) => {
+    setImages(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // Mover imagem para ser a principal (índice 0)
+  const setMainImage = (idx: number) => {
+    setImages(prev => {
+      const copy = [...prev];
+      const [item] = copy.splice(idx, 1);
+      return [item, ...copy];
+    });
+  };
+
+  // Upload de uma imagem para o storage
+  const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
-    formData.append('file', imageFile);
+    formData.append('file', file);
     formData.append('bucket', 'products');
-    const s = JSON.parse(localStorage.getItem('admin_session') || '{}');
     const res = await fetch('/api/upload', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${s.token}` },
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
       body: formData,
     });
     if (!res.ok) throw new Error('Erro ao fazer upload da imagem');
@@ -76,15 +112,24 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
     setSaving(true);
 
     try {
-      let mainImageUrl = product?.main_image_url || '';
-      if (imageFile) {
-        const url = await uploadImage();
-        if (url) mainImageUrl = url;
+      // Fazer upload das imagens novas (que têm file != null)
+      const resolvedImages: string[] = [];
+      for (const img of images) {
+        if (img.file) {
+          const url = await uploadFile(img.file);
+          resolvedImages.push(url);
+        } else if (img.url) {
+          resolvedImages.push(img.url);
+        }
       }
+
+      const mainImageUrl = resolvedImages[0] || '';
+      const allImages = resolvedImages; // array completo incluindo a principal
 
       const payload = {
         ...form,
         main_image_url: mainImageUrl,
+        images: allImages,
         price_original: Number(form.price_original),
         price_sale: form.price_sale ? Number(form.price_sale) : null,
         price_pix: form.price_pix ? Number(form.price_pix) : null,
@@ -134,20 +179,64 @@ export function ProductModal({ product, onClose, onSaved }: ProductModalProps) {
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{error}</div>
           )}
 
-          {/* Imagem */}
+          {/* ── FOTOS DO PRODUTO (múltiplas) ── */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Foto do Produto</label>
-            <div className="flex items-center gap-4">
-              {imagePreview ? (
-                <img src={imagePreview} alt="Preview" className="w-20 h-20 rounded-lg object-cover border border-gray-200" />
-              ) : (
-                <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300">
-                  <Upload className="w-6 h-6 text-gray-400" />
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Fotos do Produto
+              <span className="ml-2 text-xs text-gray-400 font-normal">A primeira foto é a principal. Clique na ⭐ para definir outra como principal.</span>
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              {images.map((img, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={img.preview}
+                    alt={`Foto ${idx + 1}`}
+                    className={`w-20 h-20 rounded-lg object-cover border-2 transition-all ${
+                      idx === 0 ? 'border-amber-500 ring-2 ring-amber-200' : 'border-gray-200'
+                    }`}
+                  />
+                  {/* Badge principal */}
+                  {idx === 0 && (
+                    <span className="absolute -top-1.5 -left-1.5 bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      PRINCIPAL
+                    </span>
+                  )}
+                  {/* Botões de ação */}
+                  <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                    {idx !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setMainImage(idx)}
+                        title="Definir como principal"
+                        className="p-1 bg-amber-500 text-white rounded-full hover:bg-amber-600"
+                      >
+                        <Star className="w-3 h-3" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      title="Remover foto"
+                      className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-              )}
-              <label className="cursor-pointer bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg transition-colors">
-                {imagePreview ? 'Trocar foto' : 'Adicionar foto'}
-                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+              ))}
+
+              {/* Botão adicionar fotos */}
+              <label className="w-20 h-20 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition-colors">
+                <Plus className="w-5 h-5 text-gray-400" />
+                <span className="text-[10px] text-gray-400 text-center leading-tight">Adicionar<br/>foto</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleAddImages}
+                  className="hidden"
+                />
               </label>
             </div>
           </div>
