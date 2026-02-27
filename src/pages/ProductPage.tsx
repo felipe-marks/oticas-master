@@ -100,7 +100,13 @@ function ProductPageContent() {
     );
   }
 
-  const images = product.images && product.images.length > 0 ? product.images : (product.image_url ? [product.image_url] : []);
+  const images = product.images && product.images.length > 0
+    ? product.images
+    : product.main_image_url
+      ? [product.main_image_url]
+      : product.image_url
+        ? [product.image_url]
+        : [];
   const price = product.price_sale ?? product.price_original ?? 0;
   const hasDiscount = product.price_original && product.price_sale && product.price_sale < product.price_original;
   const discountPct = hasDiscount ? Math.round((1 - (product.price_sale! / product.price_original!)) * 100) : 0;

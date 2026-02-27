@@ -74,7 +74,16 @@ export default async function handler(req, res) {
 
   // ── GET /api/products — listar produtos (público) ─────────────────────────
   if (req.method === 'GET' && !id) {
-    const { page = 1, limit = 15, search, active, featured, category_id, is_promotion } = req.query;
+    const { page = 1, limit = 15, search, active, featured, category_id, is_promotion, slug: productSlug } = req.query;
+
+    // ── Busca por slug de produto individual ──────────────────────────────
+    if (productSlug) {
+      const { data, error } = await supabase
+        .from('products').select('*, categories(*)').eq('slug', productSlug).single();
+      if (error || !data) return res.status(404).json({ message: 'Produto não encontrado' });
+      return res.status(200).json({ product: data, products: [data] });
+    }
+
     const offset = (Number(page) - 1) * Number(limit);
 
     let query = supabase.from('products').select('*, categories(name, slug)', { count: 'exact' });
