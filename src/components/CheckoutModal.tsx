@@ -91,10 +91,28 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
 
   const [orderResult, setOrderResult] = useState<any>(null);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [installmentPlans, setInstallmentPlans] = useState<Array<{
+    installments: number;
+    installment_value: number;
+    total_value: number;
+    interest_free: boolean;
+    interest_total: number;
+  }>>([]);
 
   const pixTotal = items.reduce((sum, i) => sum + (i.price_pix ?? i.price * 0.95) * i.quantity, 0);
   const shipping = subtotal >= 300 ? 0 : 25;
   const total = paymentMethod === 'pix' ? pixTotal + shipping : subtotal + shipping;
+  const cardTotal = subtotal + shipping;
+
+  // Buscar parcelas com juros do PagBank quando o modal abre ou o valor muda
+  useEffect(() => {
+    if (!isOpen || cardTotal <= 0) return;
+    const valueInCents = Math.round(cardTotal * 100);
+    fetch(`/api/installments?value=${valueInCents}&max_installments=12`)
+      .then(r => r.json())
+      .then(d => { if (d.installments) setInstallmentPlans(d.installments); })
+      .catch(() => {});
+  }, [isOpen, cardTotal]);
 
   // Carregar dados do cliente logado
   useEffect(() => {
@@ -554,12 +572,31 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
                       value={card.installments}
                       onChange={e => setCard(p => ({ ...p, installments: Number(e.target.value) }))}
                     >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                        <option key={n} value={n}>
-                          {n}x de {formatCurrency((subtotal + shipping) / n)} {n === 1 ? '(sem juros)' : ''}
-                        </option>
-                      ))}
+                      {installmentPlans.length > 0
+                        ? installmentPlans.map(plan => (
+                          <option key={plan.installments} value={plan.installments}>
+                            {plan.installments}x de {formatCurrency(plan.installment_value / 100)}
+                            {plan.interest_free
+                              ? ' (sem juros)'
+                              : ` — total ${formatCurrency(plan.total_value / 100)}`
+                            }
+                          </option>
+                        ))
+                        : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                          <option key={n} value={n}>
+                            {n}x de {formatCurrency((subtotal + shipping) / n)} {n === 1 ? '(sem juros)' : ''}
+                          </option>
+                        ))
+                      }
                     </select>
+                    {card.installments > 1 && installmentPlans.length > 0 && (() => {
+                      const plan = installmentPlans.find(p => p.installments === card.installments);
+                      return plan && !plan.interest_free && plan.interest_total > 0 ? (
+                        <p className="text-xs text-orange-500 mt-1">
+                          Juros: +{formatCurrency(plan.interest_total / 100)} — Total: {formatCurrency(plan.total_value / 100)}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               )}

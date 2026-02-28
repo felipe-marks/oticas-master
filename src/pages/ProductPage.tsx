@@ -32,6 +32,14 @@ function ProductPageContent() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [installmentPlans, setInstallmentPlans] = useState<Array<{
+    installments: number;
+    installment_value: number;
+    total_value: number;
+    interest_free: boolean;
+    interest_total: number;
+  }>>([]);
+  const [showInstallments, setShowInstallments] = useState(false);
   const { addItem } = useCart();
 
   // Pegar o slug da URL: /produto/nome-do-produto
@@ -44,8 +52,21 @@ function ProductPageContent() {
       .then(data => {
         const list = data.products || data || [];
         const found = Array.isArray(list) ? list[0] : null;
-        if (found) { setProduct(found); setLoading(false); }
-        else { setError(true); setLoading(false); }
+        if (found) {
+          setProduct(found);
+          setLoading(false);
+          // Buscar parcelas com juros do PagBank
+          const priceInCents = Math.round((found.price_sale ?? found.price_original ?? 0) * 100);
+          if (priceInCents > 0) {
+            fetch(`/api/installments?value=${priceInCents}&max_installments=12`)
+              .then(r => r.json())
+              .then(d => { if (d.installments) setInstallmentPlans(d.installments); })
+              .catch(() => {});
+          }
+        } else {
+          setError(true);
+          setLoading(false);
+        }
       })
       .catch(() => { setError(true); setLoading(false); });
   }, [slug]);
@@ -239,9 +260,69 @@ function ProductPageContent() {
                     {formatCurrency(product.price_pix)} <span className="text-sm font-normal text-green-600">(5% de desconto)</span>
                   </p>
                 )}
-                <p className="text-sm text-gray-500">
-                  ou <span className="font-semibold text-gray-700">{installments}x de {formatCurrency(installmentValue)}</span> sem juros
-                </p>
+                {/* Parcelas com juros do PagBank */}
+                {installmentPlans.length > 0 ? (
+                  <div>
+                    <button
+                      onClick={() => setShowInstallments(!showInstallments)}
+                      className="text-sm text-[#8B6914] font-semibold underline underline-offset-2 hover:text-[#6B4F0E] transition-colors"
+                    >
+                      {showInstallments ? 'Ocultar parcelas' : `Ver parcelamento em até ${installmentPlans[installmentPlans.length - 1].installments}x`}
+                    </button>
+                    {!showInstallments && (
+                      <p className="text-sm text-gray-500 mt-1">
+                        ou <span className="font-semibold text-gray-700">
+                          {installmentPlans[installmentPlans.length - 1].installments}x de{' '}
+                          {formatCurrency(installmentPlans[installmentPlans.length - 1].installment_value / 100)}
+                        </span>
+                        {installmentPlans[installmentPlans.length - 1].interest_free
+                          ? ' sem juros'
+                          : ` (total: ${formatCurrency(installmentPlans[installmentPlans.length - 1].total_value / 100)})`
+                        }
+                      </p>
+                    )}
+                    {showInstallments && (
+                      <div className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="text-left px-3 py-2 font-semibold text-gray-600">Parcelas</th>
+                              <th className="text-right px-3 py-2 font-semibold text-gray-600">Valor/parcela</th>
+                              <th className="text-right px-3 py-2 font-semibold text-gray-600">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {installmentPlans.map((plan, idx) => (
+                              <tr key={plan.installments} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                                <td className="px-3 py-2 text-gray-700">
+                                  {plan.installments}x
+                                  {plan.interest_free && (
+                                    <span className="ml-1 text-xs text-green-600 font-semibold">sem juros</span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-right font-semibold text-gray-800">
+                                  {formatCurrency(plan.installment_value / 100)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-gray-500">
+                                  {formatCurrency(plan.total_value / 100)}
+                                  {!plan.interest_free && plan.interest_total > 0 && (
+                                    <span className="block text-xs text-orange-500">
+                                      +{formatCurrency(plan.interest_total / 100)} juros
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    ou <span className="font-semibold text-gray-700">{installments}x de {formatCurrency(installmentValue)}</span> sem juros
+                  </p>
+                )}
               </div>
 
               {/* Descrição */}
