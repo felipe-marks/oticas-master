@@ -6,6 +6,7 @@ import {
   Truck, Tag
 } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { FreightCalculator } from './FreightCalculator';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -91,6 +92,7 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
 
   const [orderResult, setOrderResult] = useState<any>(null);
   const [loadingCep, setLoadingCep] = useState(false);
+  const [freteAtual, setFreteAtual] = useState<any>(null);
   const [installmentPlans, setInstallmentPlans] = useState<Array<{
     installments: number;
     installment_value: number;
@@ -100,7 +102,8 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
   }>>([]);
 
   const pixTotal = items.reduce((sum, i) => sum + (i.price_pix ?? i.price * 0.95) * i.quantity, 0);
-  const shipping = subtotal >= 300 ? 0 : 25;
+  const shippingCost = subtotal >= 300 ? 0 : (freteAtual ? freteAtual.preco : null);
+  const shipping = subtotal >= 300 ? 0 : (freteAtual ? freteAtual.preco : 0);
   const total = paymentMethod === 'pix' ? pixTotal + shipping : subtotal + shipping;
   const cardTotal = subtotal + shipping;
 
@@ -464,15 +467,20 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
               </div>
 
               {/* Frete */}
-              <div className={`flex items-center justify-between rounded-lg px-3 py-2.5 text-sm ${shipping === 0 ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
-                <div className="flex items-center gap-2">
-                  <Truck className="w-4 h-4" />
-                  <span className="font-medium">{shipping === 0 ? 'Frete Grátis!' : 'Frete'}</span>
+              {subtotal >= 300 ? (
+                <div className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm bg-green-50 text-green-700">
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4" />
+                    <span className="font-medium">Frete Grátis!</span>
+                  </div>
+                  <span className="font-bold">GRÁTIS</span>
                 </div>
-                <span className="font-bold">{shipping === 0 ? 'GRÁTIS' : formatCurrency(shipping)}</span>
-              </div>
-              {shipping > 0 && (
-                <p className="text-xs text-gray-400 text-center">Frete grátis em compras acima de R$ 300</p>
+              ) : (
+                <FreightCalculator
+                  valorProdutos={subtotal}
+                  onSelectFrete={setFreteAtual}
+                  freteAtual={freteAtual}
+                />
               )}
             </div>
           )}
