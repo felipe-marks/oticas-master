@@ -1,7 +1,7 @@
 // /api/freight.js — Cálculo de frete via Melhor Envio (PAC e SEDEX)
-const axios = require('axios');
+import axios from 'axios';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
@@ -85,8 +85,10 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({ fretes });
   } catch (error) {
-    const msg = error.response ? JSON.stringify(error.response.data).slice(0, 200) : error.message;
+    const msg = error.response
+      ? JSON.stringify(error.response.data).slice(0, 200)
+      : error.message;
     console.error('Erro ao calcular frete:', msg);
     return res.status(500).json({ error: 'Erro ao calcular frete. Tente novamente.' });
   }
-};
+}
