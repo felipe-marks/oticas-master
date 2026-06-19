@@ -231,18 +231,32 @@ export default async function handler(req, res) {
 
   // ─── POST /api/payment?action=webhook ──────────────────────────────────────
   if (req.method === 'POST' && action === 'webhook') {
-    const { id, charges } = req.body;
+    const { id } = req.body;
+    if (!id) return res.status(400).json({ message: 'ID obrigatório' });
+
+    // Verificar se o pedido existe no banco antes de atualizar
+    const { data: existingOrder } = await supabase
+      .from('orders').select('id').eq('pagbank_order_id', id).maybeSingle();
+    if (!existingOrder) return res.status(200).json({ received: true });
+
+    // Confirmar status diretamente na API do PagBank (não confiar no payload cegamente)
     try {
-      const charge = charges?.[0];
-      if (charge?.status === 'PAID') {
+      const pagbankVerify = await fetch(`${PAGBANK_BASE_URL}/orders/${id}`, {
+        headers: { 'Authorization': `Bearer ${PAGBANK_TOKEN}`, 'x-api-version': '4.0' },
+      });
+      if (!pagbankVerify.ok) return res.status(200).json({ received: true });
+      const pagbankOrder = await pagbankVerify.json();
+      const status = pagbankOrder.charges?.[0]?.status;
+
+      if (status === 'PAID') {
         await supabase.from('orders')
           .update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
-      } else if (charge?.status === 'DECLINED') {
+      } else if (status === 'DECLINED') {
         await supabase.from('orders')
           .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
-      } else if (charge?.status === 'CANCELED') {
+      } else if (status === 'CANCELED') {
         await supabase.from('orders')
           .update({ payment_status: 'cancelled', status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
