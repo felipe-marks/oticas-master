@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /private
+
+# Sitemaps
+Sitemap: https://oticasmaster.com.br/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1
