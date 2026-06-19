@@ -222,3 +222,136 @@ export async function sendOrderConfirmationEmail({ name, email, orderNumber, ite
     html,
   });
 }
+
+/**
+ * E-mail de boas-vindas à newsletter com cupom de 10% OFF
+ */
+export async function sendNewsletterWelcomeEmail({ email, name }) {
+  const greeting = name ? `Olá, ${name.split(' ')[0]}!` : 'Olá!';
+  const COUPON = 'BEMVINDO10';
+
+  const html = baseTemplate(`
+    <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:22px;">${greeting} Você está dentro! 🎉</h2>
+    <p style="margin:0 0 16px;color:#444;font-size:15px;line-height:1.6;">
+      Obrigado por se cadastrar na newsletter da <strong>Óticas Master</strong>. Como prometido, aqui está seu cupom de desconto exclusivo:
+    </p>
+
+    <div style="background:#1a1a2e;border-radius:12px;padding:24px;text-align:center;margin:0 0 24px;">
+      <p style="margin:0 0 8px;color:#a0a0b0;font-size:13px;text-transform:uppercase;letter-spacing:2px;">Seu cupom de desconto</p>
+      <p style="margin:0 0 8px;color:#c9a84c;font-size:36px;font-weight:900;letter-spacing:4px;">${COUPON}</p>
+      <p style="margin:0;color:#ffffff;font-size:18px;font-weight:700;">10% OFF na primeira compra</p>
+    </div>
+
+    <p style="margin:0 0 8px;color:#666;font-size:14px;line-height:1.6;">
+      Use o código acima no checkout para garantir 10% de desconto na sua primeira compra no site.
+    </p>
+    <p style="margin:0 0 24px;color:#888;font-size:13px;">
+      Cupom válido para compras acima de R$ 100,00.
+    </p>
+
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+      <tr>
+        <td style="background:#c9a84c;border-radius:8px;padding:14px 32px;">
+          <a href="${STORE_URL}" style="color:#1a1a2e;font-size:15px;font-weight:700;text-decoration:none;display:block;">
+            Comprar Agora →
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;color:#bbb;font-size:12px;text-align:center;">
+      Você está recebendo este e-mail porque se cadastrou em nossa newsletter.<br>
+      <a href="${STORE_URL}" style="color:#c9a84c;">Cancelar inscrição</a>
+    </p>
+  `);
+
+  return sendEmail({
+    to: email,
+    subject: 'Seu cupom de 10% OFF chegou — Óticas Master 🎁',
+    html,
+  });
+}
+
+/**
+ * E-mail de notificação para a loja quando alguém envia o formulário de contato
+ */
+export async function sendContactNotificationEmail({ name, email, phone, message }) {
+  const html = baseTemplate(`
+    <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:22px;">📬 Nova mensagem no site</h2>
+    <p style="margin:0 0 20px;color:#666;font-size:14px;">Uma nova mensagem foi enviada pelo formulário de contato do site.</p>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 24px;border:1px solid #eee;border-radius:8px;overflow:hidden;">
+      <tr style="background:#f9f9f9;">
+        <td style="padding:12px 16px;font-size:13px;color:#888;font-weight:600;width:120px;border-bottom:1px solid #eee;">Nome</td>
+        <td style="padding:12px 16px;font-size:14px;color:#333;border-bottom:1px solid #eee;">${name}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#888;font-weight:600;border-bottom:1px solid #eee;">E-mail</td>
+        <td style="padding:12px 16px;font-size:14px;border-bottom:1px solid #eee;">
+          <a href="mailto:${email}" style="color:#c9a84c;">${email}</a>
+        </td>
+      </tr>
+      <tr style="background:#f9f9f9;">
+        <td style="padding:12px 16px;font-size:13px;color:#888;font-weight:600;border-bottom:1px solid #eee;">Telefone</td>
+        <td style="padding:12px 16px;font-size:14px;color:#333;border-bottom:1px solid #eee;">${phone || 'Não informado'}</td>
+      </tr>
+      <tr>
+        <td style="padding:12px 16px;font-size:13px;color:#888;font-weight:600;vertical-align:top;">Mensagem</td>
+        <td style="padding:12px 16px;font-size:14px;color:#333;line-height:1.6;">${message.replace(/\n/g, '<br>')}</td>
+      </tr>
+    </table>
+
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+      <tr>
+        <td style="background:#c9a84c;border-radius:8px;padding:12px 28px;">
+          <a href="mailto:${email}?subject=Re: Contato Óticas Master" style="color:#1a1a2e;font-size:14px;font-weight:700;text-decoration:none;display:block;">
+            Responder por E-mail →
+          </a>
+        </td>
+      </tr>
+    </table>
+  `);
+
+  return sendEmail({
+    to: 'felipedourado029@gmail.com',
+    subject: `Nova mensagem de ${name} — Formulário de Contato`,
+    html,
+  });
+}
+
+/**
+ * E-mail de confirmação para quem enviou o formulário de contato
+ */
+export async function sendContactConfirmationEmail({ name, email }) {
+  const firstName = name.split(' ')[0];
+
+  const html = baseTemplate(`
+    <h2 style="margin:0 0 16px;color:#1a1a2e;font-size:22px;">Mensagem recebida! ✅</h2>
+    <p style="margin:0 0 16px;color:#444;font-size:15px;line-height:1.6;">
+      Olá, <strong>${firstName}</strong>! Recebemos sua mensagem e entraremos em contato em breve.
+    </p>
+    <p style="margin:0 0 24px;color:#444;font-size:15px;line-height:1.6;">
+      Nosso horário de atendimento é de <strong>segunda a sábado, das 8h às 18h</strong>. Se precisar de uma resposta mais rápida, entre em contato pelo WhatsApp:
+    </p>
+
+    <table cellpadding="0" cellspacing="0" style="margin:0 auto 24px;">
+      <tr>
+        <td style="background:#25D366;border-radius:8px;padding:14px 32px;">
+          <a href="https://wa.me/5594981796065" style="color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;display:block;">
+            Falar no WhatsApp →
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin:0;color:#888;font-size:13px;text-align:center;line-height:1.5;">
+      Obrigado por entrar em contato com a Óticas Master!
+    </p>
+  `);
+
+  return sendEmail({
+    to: email,
+    subject: 'Recebemos sua mensagem — Óticas Master',
+    html,
+  });
+}

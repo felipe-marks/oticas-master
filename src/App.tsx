@@ -13,10 +13,11 @@ import { CartDrawer } from './components/CartDrawer';
 import { CartProvider } from './contexts/CartContext';
 import { AdminApp } from './pages/admin/AdminApp';
 
-// Lazy load para páginas de produto, categoria e área do cliente
+// Lazy load para páginas de produto, categoria, área do cliente e política de privacidade
 const ProductPage = lazy(() => import('./pages/ProductPage'));
 const CategoryPage = lazy(() => import('./pages/CategoryPage'));
 const CustomerArea = lazy(() => import('./pages/CustomerArea'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 
 function LoadingSpinner() {
   return (
@@ -58,6 +59,15 @@ function Router() {
     return (
       <Suspense fallback={<LoadingSpinner />}>
         <CategoryPage />
+      </Suspense>
+    );
+  }
+
+  // Política de privacidade
+  if (path === '/politica-de-privacidade') {
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <PrivacyPolicy />
       </Suspense>
     );
   }

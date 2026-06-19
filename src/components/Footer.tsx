@@ -46,10 +46,16 @@ export const Footer: React.FC = () => {
           <div>
             <h4 className="font-serif text-lg font-bold text-gold mb-6">Institucional</h4>
             <ul className="space-y-3">
-              {['Sobre Nós', 'Nossas Lojas', 'Política de Privacidade', 'Trocas e Devoluções', 'Trabalhe Conosco'].map((item) => (
-                <li key={item}>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors text-sm hover:translate-x-1 inline-block">
-                    {item}
+              {[
+                { label: 'Sobre Nós', href: '/#sobre' },
+                { label: 'Nossas Lojas', href: '/#contato' },
+                { label: 'Política de Privacidade', href: '/politica-de-privacidade' },
+                { label: 'Trocas e Devoluções', href: '/#contato' },
+                { label: 'Trabalhe Conosco', href: '/#contato' },
+              ].map((item) => (
+                <li key={item.label}>
+                  <a href={item.href} className="text-gray-400 hover:text-white transition-colors text-sm hover:translate-x-1 inline-block">
+                    {item.label}
                   </a>
                 </li>
               ))}

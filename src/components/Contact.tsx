@@ -69,22 +69,20 @@ export const Contact: React.FC = () => {
     setLoading(true);
 
     try {
-      // Simular envio (em produção, seria uma chamada API)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Construir mensagem WhatsApp
-      const message = `Olá! Meu nome é ${formData.name}. ${formData.message}. Meu email é ${formData.email} e telefone ${formData.phone}`;
-      const whatsappUrl = `https://wa.me/5594981796065?text=${encodeURIComponent(message)}`;
-      
-      // Abrir WhatsApp
-      window.open(whatsappUrl, '_blank');
-      
-      // Resetar formulário
-      setFormData({ name: '', email: '', phone: '', message: '' });
-      setSubmitted(true);
-      
-      // Limpar mensagem de sucesso após 5 segundos
-      setTimeout(() => setSubmitted(false), 5000);
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        setFormData({ name: '', email: '', phone: '', message: '' });
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 6000);
+      } else {
+        const data = await res.json();
+        console.error('Erro ao enviar:', data.message);
+      }
     } catch (error) {
       console.error('Erro ao enviar formulário:', error);
     } finally {
