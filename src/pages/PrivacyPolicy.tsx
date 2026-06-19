@@ -104,8 +104,8 @@ export default function PrivacyPolicy() {
               </ul>
               <p className="mt-3">
                 Para exercer qualquer um desses direitos, entre em contato pelo e-mail{' '}
-                <a href="mailto:felipedourado029@gmail.com" className="text-gold hover:underline">
-                  felipedourado029@gmail.com
+                <a href="mailto:oticasmaster@outlook.com.br" className="text-gold hover:underline">
+                  oticasmaster@outlook.com.br
                 </a>{' '}
                 ou pelo WhatsApp <a href="https://wa.me/5594981796065" className="text-gold hover:underline">(94) 98179-6065</a>.
               </p>
@@ -146,7 +146,7 @@ export default function PrivacyPolicy() {
               <address className="not-italic mt-3 space-y-1 text-gray-600">
                 <p><strong>Óticas Master</strong></p>
                 <p>Rua Costa e Silva, Q06, L02, Bairro Esplanada, Parauapebas – PA</p>
-                <p>E-mail: <a href="mailto:felipedourado029@gmail.com" className="text-gold hover:underline">felipedourado029@gmail.com</a></p>
+                <p>E-mail: <a href="mailto:oticasmaster@outlook.com.br" className="text-gold hover:underline">oticasmaster@outlook.com.br</a></p>
                 <p>WhatsApp: <a href="https://wa.me/5594981796065" className="text-gold hover:underline">(94) 98179-6065</a></p>
               </address>
             </section>

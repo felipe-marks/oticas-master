@@ -313,7 +313,7 @@ export async function sendContactNotificationEmail({ name, email, phone, message
   `);
 
   return sendEmail({
-    to: 'felipedourado029@gmail.com',
+    to: 'oticasmaster@outlook.com.br',
     subject: `Nova mensagem de ${name} — Formulário de Contato`,
     html,
   });
