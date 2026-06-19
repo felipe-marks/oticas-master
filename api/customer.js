@@ -142,9 +142,9 @@ export default async function handler(req, res) {
     const { data: orders, error } = await supabase
       .from('orders')
       .select(`
-        id, order_number, status, total, payment_method, shipping_tracking, notes, created_at,
+        id, order_number, status, total_amount, payment_method, tracking_code, notes, created_at,
         order_items (
-          id, product_name, quantity, unit_price, product_image
+          id, product_name, quantity, unit_price, image_url
         )
       `)
       .eq('customer_id', payload.id)

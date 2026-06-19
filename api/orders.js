@@ -94,7 +94,6 @@ export default async function handler(req, res) {
       product_id: i.id,
       product_name: i.name,
       product_sku: i.sku,
-      product_image: i.image || null,
       quantity: i.quantity,
       unit_price: i.price,
       total_price: i.price * i.quantity,

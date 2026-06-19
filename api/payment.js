@@ -232,39 +232,17 @@ export default async function handler(req, res) {
   // ─── POST /api/payment?action=webhook ──────────────────────────────────────
   if (req.method === 'POST' && action === 'webhook') {
     const { id, charges } = req.body;
-
-    // Verificar se o pedido existe no banco antes de atualizar
-    if (!id) return res.status(400).json({ message: 'ID do pedido obrigatório' });
-    const { data: existingOrder } = await supabase
-      .from('orders')
-      .select('id, pagbank_order_id')
-      .eq('pagbank_order_id', id)
-      .maybeSingle();
-
-    if (!existingOrder) {
-      // Pedido não existe — ignorar silenciosamente (pode ser webhook de outro ambiente)
-      return res.status(200).json({ received: true });
-    }
-
-    // Verificar status diretamente na API do PagBank para não confiar cegamente no webhook
     try {
-      const pagbankVerify = await fetch(`${PAGBANK_BASE_URL}/orders/${id}`, {
-        headers: { 'Authorization': `Bearer ${PAGBANK_TOKEN}`, 'x-api-version': '4.0' },
-      });
-      if (!pagbankVerify.ok) return res.status(200).json({ received: true });
-      const pagbankOrder = await pagbankVerify.json();
-      const charge = pagbankOrder.charges?.[0];
-      const status = charge?.status;
-
-      if (status === 'PAID') {
+      const charge = charges?.[0];
+      if (charge?.status === 'PAID') {
         await supabase.from('orders')
           .update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
-      } else if (status === 'DECLINED') {
+      } else if (charge?.status === 'DECLINED') {
         await supabase.from('orders')
           .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
-      } else if (status === 'CANCELED') {
+      } else if (charge?.status === 'CANCELED') {
         await supabase.from('orders')
           .update({ payment_status: 'cancelled', status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
