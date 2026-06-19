@@ -70,7 +70,9 @@ export function Promotions() {
         starts_at: form.starts_at || null,
         ends_at: form.ends_at || null,
       };
-      const url = editing ? `/api/catalog?resource=promotions&id=${editing.id}` : '/api/promotions';
+      const url = editing
+        ? `/api/catalog?resource=promotions&id=${editing.id}`
+        : `/api/catalog?resource=promotions`;
       const method = editing ? 'PUT' : 'POST';
       const res = await fetch(url, { method, headers: getAuthHeader(), body: JSON.stringify(payload) });
       if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
@@ -82,7 +84,7 @@ export function Promotions() {
 
   const deletePromo = async (id: string, name: string) => {
     if (!confirm(`Remover a promoção "${name}"?`)) return;
-    await fetch(`/api/promotions/${id}`, { method: 'DELETE', headers: getAuthHeader() });
+    await fetch(`/api/catalog?resource=promotions&id=${id}`, { method: 'DELETE', headers: getAuthHeader() });
     fetchPromotions();
   };
 

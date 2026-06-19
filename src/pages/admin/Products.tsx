@@ -75,6 +75,15 @@ export function Products() {
     fetchProducts();
   };
 
+  const togglePromotion = async (id: string, current: boolean) => {
+    await fetch(`/api/products?id=${id}`, {
+      method: 'PATCH',
+      headers: getAuthHeader(),
+      body: JSON.stringify({ is_promotion: !current }),
+    });
+    fetchProducts();
+  };
+
   const deleteProduct = async (id: string, name: string) => {
     if (!confirm(`Remover o produto "${name}"? Esta ação não pode ser desfeita.`)) return;
     await fetch(`/api/products?id=${id}`, { method: 'DELETE', headers: getAuthHeader() });
@@ -200,6 +209,13 @@ export function Products() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => togglePromotion(p.id, p.is_promotion)}
+                          title={p.is_promotion ? 'Remover promoção' : 'Marcar como promoção'}
+                          className={`p-1.5 rounded-lg transition-colors ${p.is_promotion ? 'text-red-500 bg-red-50' : 'text-gray-300 hover:text-red-500 hover:bg-red-50'}`}
+                        >
+                          <Tag className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => toggleFeatured(p.id, p.featured)}
                           title={p.featured ? 'Remover destaque' : 'Destacar'}
