@@ -69,7 +69,7 @@ export const Contact: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/contact', {
+      const res = await fetch('/api/public?action=contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

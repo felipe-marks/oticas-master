@@ -15,7 +15,7 @@ export const Newsletter: React.FC = () => {
     }
     setStatus('loading');
     try {
-      const res = await fetch('/api/newsletter', {
+      const res = await fetch('/api/public?action=newsletter', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
