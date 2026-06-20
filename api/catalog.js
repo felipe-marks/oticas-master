@@ -60,7 +60,24 @@ export default async function handler(req, res) {
   // ===== PROMOÇÕES =====
   if (resource === 'promotions') {
     if (req.method === 'GET') {
-      const { active_only } = req.query;
+      const { active_only, code } = req.query;
+
+      // Validação pública de cupom por código
+      if (code) {
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+          .from('promotions')
+          .select('id, name, type, value, min_order_value, code')
+          .eq('code', code.toUpperCase().trim())
+          .eq('active', true)
+          .or(`starts_at.is.null,starts_at.lte.${now}`)
+          .or(`ends_at.is.null,ends_at.gte.${now}`)
+          .maybeSingle();
+        if (error) return res.status(500).json({ message: error.message });
+        if (!data) return res.status(404).json({ message: 'Cupom inválido ou expirado.' });
+        return res.status(200).json(data);
+      }
+
       let query = supabase.from('promotions').select('*').order('created_at', { ascending: false });
       if (active_only === 'true') {
         const now = new Date().toISOString();

@@ -101,11 +101,53 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
     interest_total: number;
   }>>([]);
 
+  const [couponCode, setCouponCode] = useState('');
+  const [couponApplied, setCouponApplied] = useState<{ id: string; name: string; type: string; value: number; min_order_value: number; code: string } | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const pixTotal = items.reduce((sum, i) => sum + (i.price_pix ?? i.price * 0.95) * i.quantity, 0);
   const shippingCost = subtotal >= 300 ? 0 : (freteAtual ? freteAtual.preco : null);
   const shipping = subtotal >= 300 ? 0 : (freteAtual ? freteAtual.preco : 0);
-  const total = paymentMethod === 'pix' ? pixTotal + shipping : subtotal + shipping;
-  const cardTotal = subtotal + shipping;
+
+  const couponDiscount = (() => {
+    if (!couponApplied) return 0;
+    if (couponApplied.type === 'percentage') return (subtotal * couponApplied.value) / 100;
+    if (couponApplied.type === 'fixed_amount') return Math.min(couponApplied.value, subtotal);
+    if (couponApplied.type === 'free_shipping') return shipping;
+    return 0;
+  })();
+
+  const total = paymentMethod === 'pix'
+    ? Math.max(0, pixTotal - couponDiscount + shipping)
+    : Math.max(0, subtotal - couponDiscount + shipping);
+  const cardTotal = Math.max(0, subtotal - couponDiscount + shipping);
+
+  const applyCoupon = async () => {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) return;
+    setCouponLoading(true);
+    setCouponError('');
+    try {
+      const res = await fetch(`/api/catalog?resource=promotions&code=${code}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setCouponError(data.message || 'Cupom inválido.');
+        setCouponApplied(null);
+        return;
+      }
+      if (data.min_order_value && subtotal < data.min_order_value) {
+        setCouponError(`Pedido mínimo de ${formatCurrency(data.min_order_value)} para usar este cupom.`);
+        setCouponApplied(null);
+        return;
+      }
+      setCouponApplied(data);
+    } catch {
+      setCouponError('Erro ao validar cupom. Tente novamente.');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   // Buscar parcelas com juros do PagBank quando o modal abre ou o valor muda
   useEffect(() => {
@@ -222,6 +264,8 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
           customer,
           shipping_address: address,
           payment_method: paymentMethod === 'pix' ? 'pix' : 'credit_card',
+          coupon_code: couponApplied?.code || null,
+          discount_amount: couponDiscount,
           ...(paymentMethod === 'credit_card' ? {
             card: {
               number: card.number.replace(/\s/g, ''),
@@ -620,6 +664,42 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
                 </div>
               )}
 
+              {/* Campo de cupom */}
+              <div>
+                {couponApplied ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                    <span className="text-green-700 text-sm font-medium">
+                      Cupom <span className="font-mono font-bold">{couponApplied.code}</span> aplicado ✓
+                    </span>
+                    <button
+                      onClick={() => { setCouponApplied(null); setCouponCode(''); }}
+                      className="text-green-600 hover:text-red-500 text-xs underline"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponCode}
+                      onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                      onKeyDown={e => e.key === 'Enter' && applyCoupon()}
+                      placeholder="Código do cupom"
+                      className={`flex-1 px-3 py-2 text-sm border rounded-lg outline-none transition-all ${couponError ? 'border-red-400' : 'border-gray-300 focus:border-gold focus:ring-1 focus:ring-gold'}`}
+                    />
+                    <button
+                      onClick={applyCoupon}
+                      disabled={couponLoading || !couponCode.trim()}
+                      className="px-3 py-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-sm rounded-lg transition-colors flex items-center gap-1"
+                    >
+                      {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Aplicar'}
+                    </button>
+                  </div>
+                )}
+                {couponError && <p className="text-red-600 text-xs mt-1 px-1">{couponError}</p>}
+              </div>
+
               {/* Resumo do total */}
               <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
                 <div className="flex justify-between text-sm text-gray-600">
@@ -630,6 +710,12 @@ export function CheckoutModal({ isOpen, onClose, userToken }: CheckoutModalProps
                   <div className="flex justify-between text-sm text-green-600">
                     <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Desconto PIX (5%)</span>
                     <span>-{formatCurrency(subtotal - pixTotal)}</span>
+                  </div>
+                )}
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-amber-700">
+                    <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> Cupom {couponApplied?.code}</span>
+                    <span>-{formatCurrency(couponDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600">

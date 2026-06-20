@@ -1,5 +1,6 @@
 // api/payment.js — Integração com PagBank para checkout transparente
 import { createClient } from '@supabase/supabase-js';
+import { sendOrderConfirmationEmail } from './_email.js';
 
 function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
   // ─── POST /api/payment?action=create-order ─────────────────────────────────
   // Cria pedido no PagBank — Pix (qr_codes) ou Cartão (charges com card)
   if (req.method === 'POST' && action === 'create-order') {
-    const { items, customer, shipping_address, payment_method = 'pix', card } = req.body;
+    const { items, customer, shipping_address, payment_method = 'pix', card, coupon_code, discount_amount = 0 } = req.body;
 
     if (!items?.length || !customer?.name || !customer?.email || !customer?.cpf) {
       return res.status(400).json({ message: 'Dados incompletos: nome, email e CPF são obrigatórios' });
@@ -40,7 +41,8 @@ export default async function handler(req, res) {
     // Calcular totais
     const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
     const shipping_amount = subtotal >= 300 ? 0 : 25;
-    const total = subtotal + shipping_amount;
+    const discount = Math.max(0, Math.min(Number(discount_amount) || 0, subtotal));
+    const total = Math.max(0, subtotal - discount + shipping_amount);
 
     // Gerar número do pedido
     const order_number = `OM${Date.now().toString().slice(-8)}`;
@@ -159,7 +161,8 @@ export default async function handler(req, res) {
         customer_phone: customer.phone,
         customer_cpf: customer.cpf,
         subtotal,
-        discount_amount: 0,
+        discount_amount: discount,
+        coupon_code: coupon_code || null,
         shipping_amount,
         total,
         payment_method: payment_method === 'pix' ? 'pix' : 'credit_card',
@@ -194,7 +197,7 @@ export default async function handler(req, res) {
       const qrCode = pagbankData.qr_codes?.[0];
       const charge = pagbankData.charges?.[0];
 
-      // Se cartão foi aprovado, atualizar status
+      // Se cartão foi aprovado, atualizar status e enviar e-mail
       if (charge?.status === 'PAID' && order?.id) {
         try {
           await supabase.from('orders')
@@ -202,6 +205,17 @@ export default async function handler(req, res) {
             .eq('id', order.id);
         } catch (e) { console.error('update order error:', e); }
       }
+
+      // Enviar e-mail de confirmação do pedido (não bloqueia a resposta)
+      const paymentLabel = payment_method === 'pix' ? 'Pix' : 'Cartão de Crédito';
+      sendOrderConfirmationEmail({
+        name: customer.name,
+        email: customer.email,
+        orderNumber: order_number,
+        items: items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price })),
+        total,
+        paymentMethod: paymentLabel,
+      }).catch(err => console.error('[Email] Confirmação de pedido:', err.message));
 
       return res.status(201).json({
         order_id: order?.id,
@@ -236,7 +250,9 @@ export default async function handler(req, res) {
 
     // Verificar se o pedido existe no banco antes de atualizar
     const { data: existingOrder } = await supabase
-      .from('orders').select('id').eq('pagbank_order_id', id).maybeSingle();
+      .from('orders')
+      .select('id, order_number, customer_name, customer_email, total, payment_method')
+      .eq('pagbank_order_id', id).maybeSingle();
     if (!existingOrder) return res.status(200).json({ received: true });
 
     // Confirmar status diretamente na API do PagBank (não confiar no payload cegamente)
@@ -252,6 +268,19 @@ export default async function handler(req, res) {
         await supabase.from('orders')
           .update({ payment_status: 'paid', status: 'confirmed', updated_at: new Date().toISOString() })
           .eq('pagbank_order_id', id);
+
+        // Enviar e-mail de confirmação (para pedidos Pix confirmados via webhook)
+        if (existingOrder.customer_email) {
+          const paymentLabel = existingOrder.payment_method === 'pix' ? 'Pix' : 'Cartão de Crédito';
+          sendOrderConfirmationEmail({
+            name: existingOrder.customer_name,
+            email: existingOrder.customer_email,
+            orderNumber: existingOrder.order_number,
+            items: [{ name: 'Seu pedido', quantity: 1, price: existingOrder.total }],
+            total: existingOrder.total,
+            paymentMethod: paymentLabel,
+          }).catch(err => console.error('[Email] Webhook confirmação:', err.message));
+        }
       } else if (status === 'DECLINED') {
         await supabase.from('orders')
           .update({ payment_status: 'failed', updated_at: new Date().toISOString() })
