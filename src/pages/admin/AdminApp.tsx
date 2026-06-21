@@ -8,8 +8,9 @@ import { Orders } from './Orders';
 import { Promotions } from './Promotions';
 import { Customers } from './Customers';
 import { SiteSettings } from './SiteSettings';
+import { Categories } from './Categories';
+import { Newsletter } from './Newsletter';
 
-// Páginas placeholder para funcionalidades futuras
 function ComingSoon({ title }: { title: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-64 text-center">
@@ -44,9 +45,9 @@ function AdminContent() {
       case 'promotions': return <Promotions />;
       case 'customers': return <Customers />;
       case 'settings': return <SiteSettings />;
-      case 'categories': return <ComingSoon title="Categorias" />;
+      case 'categories': return <Categories />;
       case 'appointments': return <ComingSoon title="Agendamentos" />;
-      case 'newsletter': return <ComingSoon title="Newsletter" />;
+      case 'newsletter': return <Newsletter />;
       case 'banners': return <ComingSoon title="Banners e Slides" />;
       case 'reports': return <ComingSoon title="Relatórios" />;
       default: return <Dashboard />;
