@@ -166,6 +166,7 @@ function CategoryPageContent() {
   const meta = CATEGORY_META[rawCategory] || { label: rawCategory.charAt(0).toUpperCase() + rawCategory.slice(1), description: '', icon: null, banner: 'from-gray-50 to-white' };
 
   useEffect(() => {
+    document.title = `${meta.label} | Óticas Master`;
     fetch(`/api/products?active=true&limit=100`)
       .then(r => r.json())
       .then(data => {

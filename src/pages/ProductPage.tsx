@@ -54,6 +54,7 @@ function ProductPageContent() {
         const found = Array.isArray(list) ? list[0] : null;
         if (found) {
           setProduct(found);
+          document.title = `${found.name} | Óticas Master`;
           setLoading(false);
           // Buscar parcelas com juros do PagBank
           const priceInCents = Math.round((found.price_sale ?? found.price_original ?? 0) * 100);
