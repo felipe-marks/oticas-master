@@ -10,6 +10,7 @@ import { Customers } from './Customers';
 import { SiteSettings } from './SiteSettings';
 import { Categories } from './Categories';
 import { Newsletter } from './Newsletter';
+import { Reports } from './Reports';
 
 function ComingSoon({ title }: { title: string }) {
   return (
@@ -49,7 +50,7 @@ function AdminContent() {
       case 'appointments': return <ComingSoon title="Agendamentos" />;
       case 'newsletter': return <Newsletter />;
       case 'banners': return <ComingSoon title="Banners e Slides" />;
-      case 'reports': return <ComingSoon title="Relatórios" />;
+      case 'reports': return <Reports />;
       default: return <Dashboard />;
     }
   };
